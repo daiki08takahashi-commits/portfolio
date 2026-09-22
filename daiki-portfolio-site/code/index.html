@@ -1,0 +1,2438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Source Code — Daiki Takahashi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0A192F;
+    --foam:#F4F7F9;
+    --foam-dim:#e7edf0;
+    --teal:#00A8B5;
+    --lime:#D4E94C;
+    --ink:#0F172A;
+    --ink-soft:#4b5768;
+    --line:#d7e0e4;
+    --font-display:'Syne', 'Arial Black', sans-serif;
+    --font-body:'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono:'JetBrains Mono', 'Consolas', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--foam);color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 32px;}
+  @media (max-width:640px){.wrap{padding:0 20px;}}
+  header{padding:28px 0 8px;position:sticky;top:0;background:var(--foam);z-index:10;border-bottom:1px solid var(--line);}
+  .back-link{font-family:var(--font-mono);font-size:0.75rem;letter-spacing:0.04em;color:var(--ink-soft);opacity:0.75;transition:opacity .2s;display:inline-flex;align-items:center;gap:6px;}
+  .back-link:hover{opacity:1;color:var(--teal);}
+  .toc{display:flex;gap:18px;padding:14px 0;font-family:var(--font-mono);font-size:0.78rem;}
+  .toc a{color:var(--ink-soft);border-bottom:1px solid transparent;padding-bottom:2px;}
+  .toc a:hover{color:var(--teal);border-bottom-color:currentColor;}
+  .page-intro{padding:30px 0 6px;}
+  .page-intro h1{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02em;font-size:clamp(1.8rem,4vw,2.6rem);text-transform:uppercase;margin:0 0 8px;}
+  .page-intro p{font-family:var(--font-mono);font-size:0.82rem;color:var(--ink-soft);max-width:640px;margin:0;}
+  .file-section{padding:44px 0 20px;scroll-margin-top:100px;}
+  .file-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .file-head h2{font-family:var(--font-display);font-weight:800;font-size:1.4rem;text-transform:uppercase;margin:0;}
+  .file-name{font-family:var(--font-mono);font-size:0.78rem;color:var(--teal);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;}
+  .file-desc{font-family:var(--font-body);font-size:0.92rem;color:var(--ink-soft);max-width:760px;margin:0 0 18px;line-height:1.5;}
+  pre{
+    background:var(--navy);color:#e8f6f7;border-radius:14px;padding:22px 24px;overflow-x:auto;
+    font-family:var(--font-mono);font-size:0.8rem;line-height:1.6;margin:0 0 60px;
+    box-shadow:0 20px 40px -20px rgba(10,25,47,0.25);
+  }
+  code{white-space:pre;}
+  footer.end{padding:20px 0 80px;font-family:var(--font-mono);font-size:0.72rem;color:var(--ink-soft);opacity:0.6;}
+</style>
+</head>
+<body>
+  <header class="wrap">
+    <a class="back-link" href="../index.html">&larr; daiki takahashi</a>
+    <div class="toc">
+      <a href="#friends-source">Friends (Sõbrad) source</a>
+      <a href="#tijdmanager-source">Tijdmanager source</a>
+    </div>
+  </header>
+
+  <div class="wrap page-intro">
+    <h1>Source Code</h1>
+    <p>The actual Python behind two of my projects — read straight through, no build step required.</p>
+  </div>
+
+  <div class="wrap">
+    <section class="file-section" id="friends-source">
+      <div class="file-head">
+        <h2>Friends (Sõbrad)</h2>
+        <span class="file-name">sobrad_python_app.py</span>
+      </div>
+      <p class="file-desc">A Tkinter desktop companion app: mood check-ins, an encrypted local journal, grounding and breathing exercises, goal tracking, and automatic detection of crisis language that surfaces Canada's 988 Suicide Crisis Helpline. Originally built with multi-language support.</p>
+      <pre><code>import base64
+import hashlib
+import hmac
+import json
+import random
+import re
+import secrets
+import time
+import tkinter as tk
+import webbrowser
+from pathlib import Path
+from tkinter import messagebox, scrolledtext
+
+
+APP_NAME = &quot;SÕBRAD&quot;
+DATA_FILE = Path(__file__).with_name(&quot;sobrad_data.json&quot;)
+
+TITLE = &quot;#00A3E0&quot;
+BACKGROUND = &quot;#FFFFFF&quot;
+OPTION_BUTTON = &quot;#DDEB47&quot;
+NAVY = &quot;#0E3A5F&quot;
+TEXT = &quot;#173047&quot;
+MUTED = &quot;#62798B&quot;
+LINE = &quot;#DCEAF0&quot;
+SOFT = &quot;#F5FBFD&quot;
+DANGER = &quot;#B93645&quot;
+
+SUBTITLES = [
+    &quot;If you&#x27;ve experienced bullying, violence, or trauma, or you just don&#x27;t have anyone to talk to right now, I&#x27;m here.&quot;,
+    &quot;For anyone carrying something heavy. Talk to me.&quot;,
+    &quot;Feeling overwhelmed, panicked, or alone? Let&#x27;s get through this moment together.&quot;,
+]
+
+CRISIS_PATTERNS = [
+    r&quot;\bkill myself\b&quot;,
+    r&quot;\bsuicide\b&quot;,
+    r&quot;\bend my life\b&quot;,
+    r&quot;\bi want to die\b&quot;,
+    r&quot;\bwant to die\b&quot;,
+    r&quot;\bcan&#x27;t go on\b&quot;,
+    r&quot;\bcannot go on\b&quot;,
+    r&quot;\bno reason to live\b&quot;,
+    r&quot;\bhurt myself\b&quot;,
+    r&quot;\bself[-\s]?harm\b&quot;,
+    r&quot;\boverdose\b&quot;,
+    r&quot;\bhang myself\b&quot;,
+    r&quot;\bjump off\b&quot;,
+]
+
+HOME_OPTIONS = [
+    (&quot;mood&quot;, &quot;home_mood&quot;),
+    (&quot;chat&quot;, &quot;home_chat&quot;),
+    (&quot;emergency&quot;, &quot;home_emergency&quot;),
+    (&quot;journal&quot;, &quot;home_journal&quot;),
+    (&quot;exercises&quot;, &quot;home_exercises&quot;),
+    (&quot;goals&quot;, &quot;home_goals&quot;),
+    (&quot;dashboard&quot;, &quot;home_dashboard&quot;),
+    (&quot;privacy&quot;, &quot;home_privacy&quot;),
+]
+
+LANGUAGES = [
+    (&quot;en&quot;, &quot;🇬🇧 English (UK)&quot;),
+    (&quot;fr&quot;, &quot;🇫🇷 Français&quot;),
+    (&quot;nl&quot;, &quot;🇳🇱 Nederlands&quot;),
+    (&quot;et&quot;, &quot;🇪🇪 Eesti&quot;),
+    (&quot;es&quot;, &quot;🇪🇸 Español&quot;),
+    (&quot;it&quot;, &quot;🇮🇹 Italiano&quot;),
+    (&quot;pt&quot;, &quot;🇵🇹 Portuguese&quot;),
+    (&quot;de&quot;, &quot;🇩🇪 Deutsch&quot;),
+    (&quot;fi&quot;, &quot;🇫🇮 Suomi&quot;),
+    (&quot;sv&quot;, &quot;🇸🇪 Svenska&quot;),
+    (&quot;ja&quot;, &quot;🇯🇵 日本語&quot;),
+]
+
+LANGUAGE_LABELS = {code: label for code, label in LANGUAGES}
+LANGUAGE_CODES = {label: code for code, label in LANGUAGES}
+
+TRANSLATIONS = {
+    &quot;en&quot;: {
+        &quot;language&quot;: &quot;Language&quot;,
+        &quot;username&quot;: &quot;Username&quot;,
+        &quot;password&quot;: &quot;Password&quot;,
+        &quot;confirm_password&quot;: &quot;Confirm password&quot;,
+        &quot;login&quot;: &quot;Log in&quot;,
+        &quot;create_account&quot;: &quot;Create account&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonymous mode&quot;,
+        &quot;home&quot;: &quot;Home&quot;,
+        &quot;home_mood&quot;: &quot;Mood Check-In&quot;,
+        &quot;home_chat&quot;: &quot;Talk to AI Companion&quot;,
+        &quot;home_emergency&quot;: &quot;Emergency Help&quot;,
+        &quot;home_journal&quot;: &quot;Journal&quot;,
+        &quot;home_exercises&quot;: &quot;Recovery Exercises&quot;,
+        &quot;home_goals&quot;: &quot;Goals and Future Planning&quot;,
+        &quot;home_dashboard&quot;: &quot;Progress Dashboard&quot;,
+        &quot;home_privacy&quot;: &quot;Privacy and Security&quot;,
+        &quot;today&quot;: &quot;Today&quot;,
+        &quot;home_title&quot;: &quot;A quieter place to begin again.&quot;,
+        &quot;home_hint&quot;: &quot;Choose the smallest useful next step.&quot;,
+        &quot;home_hint_new&quot;: &quot;This can be a steady place for the next minute.&quot;,
+        &quot;companion&quot;: &quot;Companion&quot;,
+        &quot;talk_title&quot;: &quot;Talk with SÕBRAD&quot;,
+        &quot;settings&quot;: &quot;Settings&quot;,
+        &quot;privacy_title&quot;: &quot;Privacy and access&quot;,
+        &quot;save_language&quot;: &quot;Language changes save automatically.&quot;,
+    },
+    &quot;fr&quot;: {
+        &quot;language&quot;: &quot;Langue&quot;, &quot;username&quot;: &quot;Nom d&#x27;utilisateur&quot;, &quot;password&quot;: &quot;Mot de passe&quot;,
+        &quot;confirm_password&quot;: &quot;Confirmer le mot de passe&quot;, &quot;login&quot;: &quot;Connexion&quot;, &quot;create_account&quot;: &quot;Créer un compte&quot;,
+        &quot;anonymous_mode&quot;: &quot;Mode anonyme&quot;, &quot;home&quot;: &quot;Accueil&quot;, &quot;home_mood&quot;: &quot;Humeur&quot;, &quot;home_chat&quot;: &quot;Parler au compagnon IA&quot;,
+        &quot;home_emergency&quot;: &quot;Aide d&#x27;urgence&quot;, &quot;home_journal&quot;: &quot;Journal&quot;, &quot;home_exercises&quot;: &quot;Exercices de récupération&quot;,
+        &quot;home_goals&quot;: &quot;Objectifs et avenir&quot;, &quot;home_dashboard&quot;: &quot;Tableau de progrès&quot;, &quot;home_privacy&quot;: &quot;Confidentialité&quot;,
+        &quot;today&quot;: &quot;Aujourd&#x27;hui&quot;, &quot;home_title&quot;: &quot;Un endroit plus calme pour recommencer.&quot;, &quot;companion&quot;: &quot;Compagnon&quot;,
+        &quot;talk_title&quot;: &quot;Parler avec SÕBRAD&quot;, &quot;settings&quot;: &quot;Réglages&quot;, &quot;privacy_title&quot;: &quot;Confidentialité et accès&quot;,
+    },
+    &quot;nl&quot;: {
+        &quot;language&quot;: &quot;Taal&quot;, &quot;username&quot;: &quot;Gebruikersnaam&quot;, &quot;password&quot;: &quot;Wachtwoord&quot;,
+        &quot;confirm_password&quot;: &quot;Bevestig wachtwoord&quot;, &quot;login&quot;: &quot;Inloggen&quot;, &quot;create_account&quot;: &quot;Account maken&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonieme modus&quot;, &quot;home&quot;: &quot;Start&quot;, &quot;home_mood&quot;: &quot;Stemming&quot;, &quot;home_chat&quot;: &quot;Praat met AI-maatje&quot;,
+        &quot;home_emergency&quot;: &quot;Noodhulp&quot;, &quot;home_journal&quot;: &quot;Dagboek&quot;, &quot;home_exercises&quot;: &quot;Hersteloefeningen&quot;,
+        &quot;home_goals&quot;: &quot;Doelen en toekomst&quot;, &quot;home_dashboard&quot;: &quot;Voortgang&quot;, &quot;home_privacy&quot;: &quot;Privacy&quot;,
+        &quot;today&quot;: &quot;Vandaag&quot;, &quot;home_title&quot;: &quot;Een stillere plek om opnieuw te beginnen.&quot;, &quot;companion&quot;: &quot;Maatje&quot;,
+        &quot;talk_title&quot;: &quot;Praat met SÕBRAD&quot;, &quot;settings&quot;: &quot;Instellingen&quot;, &quot;privacy_title&quot;: &quot;Privacy en toegang&quot;,
+    },
+    &quot;et&quot;: {
+        &quot;language&quot;: &quot;Keel&quot;, &quot;username&quot;: &quot;Kasutajanimi&quot;, &quot;password&quot;: &quot;Parool&quot;,
+        &quot;confirm_password&quot;: &quot;Kinnita parool&quot;, &quot;login&quot;: &quot;Logi sisse&quot;, &quot;create_account&quot;: &quot;Loo konto&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonüümne režiim&quot;, &quot;home&quot;: &quot;Avaleht&quot;, &quot;home_mood&quot;: &quot;Meeleolu&quot;, &quot;home_chat&quot;: &quot;Räägi AI-kaaslasega&quot;,
+        &quot;home_emergency&quot;: &quot;Hädaabi&quot;, &quot;home_journal&quot;: &quot;Päevik&quot;, &quot;home_exercises&quot;: &quot;Taastumise harjutused&quot;,
+        &quot;home_goals&quot;: &quot;Eesmärgid ja tulevik&quot;, &quot;home_dashboard&quot;: &quot;Edusammud&quot;, &quot;home_privacy&quot;: &quot;Privaatsus&quot;,
+        &quot;today&quot;: &quot;Täna&quot;, &quot;home_title&quot;: &quot;Rahulikum koht, kust uuesti alustada.&quot;, &quot;companion&quot;: &quot;Kaaslane&quot;,
+        &quot;talk_title&quot;: &quot;Räägi SÕBRADiga&quot;, &quot;settings&quot;: &quot;Seaded&quot;, &quot;privacy_title&quot;: &quot;Privaatsus ja ligipääs&quot;,
+    },
+    &quot;es&quot;: {
+        &quot;language&quot;: &quot;Idioma&quot;, &quot;username&quot;: &quot;Usuario&quot;, &quot;password&quot;: &quot;Contraseña&quot;,
+        &quot;confirm_password&quot;: &quot;Confirmar contraseña&quot;, &quot;login&quot;: &quot;Entrar&quot;, &quot;create_account&quot;: &quot;Crear cuenta&quot;,
+        &quot;anonymous_mode&quot;: &quot;Modo anónimo&quot;, &quot;home&quot;: &quot;Inicio&quot;, &quot;home_mood&quot;: &quot;Estado de ánimo&quot;, &quot;home_chat&quot;: &quot;Hablar con IA&quot;,
+        &quot;home_emergency&quot;: &quot;Ayuda de emergencia&quot;, &quot;home_journal&quot;: &quot;Diario&quot;, &quot;home_exercises&quot;: &quot;Ejercicios de recuperación&quot;,
+        &quot;home_goals&quot;: &quot;Metas y futuro&quot;, &quot;home_dashboard&quot;: &quot;Progreso&quot;, &quot;home_privacy&quot;: &quot;Privacidad&quot;,
+        &quot;today&quot;: &quot;Hoy&quot;, &quot;home_title&quot;: &quot;Un lugar más tranquilo para empezar otra vez.&quot;, &quot;companion&quot;: &quot;Compañía&quot;,
+        &quot;talk_title&quot;: &quot;Habla con SÕBRAD&quot;, &quot;settings&quot;: &quot;Ajustes&quot;, &quot;privacy_title&quot;: &quot;Privacidad y acceso&quot;,
+    },
+    &quot;it&quot;: {
+        &quot;language&quot;: &quot;Lingua&quot;, &quot;username&quot;: &quot;Nome utente&quot;, &quot;password&quot;: &quot;Password&quot;,
+        &quot;confirm_password&quot;: &quot;Conferma password&quot;, &quot;login&quot;: &quot;Accedi&quot;, &quot;create_account&quot;: &quot;Crea account&quot;,
+        &quot;anonymous_mode&quot;: &quot;Modalità anonima&quot;, &quot;home&quot;: &quot;Home&quot;, &quot;home_mood&quot;: &quot;Umore&quot;, &quot;home_chat&quot;: &quot;Parla con IA&quot;,
+        &quot;home_emergency&quot;: &quot;Aiuto d&#x27;emergenza&quot;, &quot;home_journal&quot;: &quot;Diario&quot;, &quot;home_exercises&quot;: &quot;Esercizi di recupero&quot;,
+        &quot;home_goals&quot;: &quot;Obiettivi e futuro&quot;, &quot;home_dashboard&quot;: &quot;Progresso&quot;, &quot;home_privacy&quot;: &quot;Privacy&quot;,
+        &quot;today&quot;: &quot;Oggi&quot;, &quot;home_title&quot;: &quot;Un posto più quieto per ricominciare.&quot;, &quot;companion&quot;: &quot;Compagno&quot;,
+        &quot;talk_title&quot;: &quot;Parla con SÕBRAD&quot;, &quot;settings&quot;: &quot;Impostazioni&quot;, &quot;privacy_title&quot;: &quot;Privacy e accesso&quot;,
+    },
+    &quot;pt&quot;: {
+        &quot;language&quot;: &quot;Idioma&quot;, &quot;username&quot;: &quot;Nome de utilizador&quot;, &quot;password&quot;: &quot;Palavra-passe&quot;,
+        &quot;confirm_password&quot;: &quot;Confirmar palavra-passe&quot;, &quot;login&quot;: &quot;Entrar&quot;, &quot;create_account&quot;: &quot;Criar conta&quot;,
+        &quot;anonymous_mode&quot;: &quot;Modo anónimo&quot;, &quot;home&quot;: &quot;Início&quot;, &quot;home_mood&quot;: &quot;Humor&quot;, &quot;home_chat&quot;: &quot;Falar com IA&quot;,
+        &quot;home_emergency&quot;: &quot;Ajuda de emergência&quot;, &quot;home_journal&quot;: &quot;Diário&quot;, &quot;home_exercises&quot;: &quot;Exercícios de recuperação&quot;,
+        &quot;home_goals&quot;: &quot;Metas e futuro&quot;, &quot;home_dashboard&quot;: &quot;Progresso&quot;, &quot;home_privacy&quot;: &quot;Privacidade&quot;,
+        &quot;today&quot;: &quot;Hoje&quot;, &quot;home_title&quot;: &quot;Um lugar mais calmo para recomeçar.&quot;, &quot;companion&quot;: &quot;Companhia&quot;,
+        &quot;talk_title&quot;: &quot;Fale com SÕBRAD&quot;, &quot;settings&quot;: &quot;Definições&quot;, &quot;privacy_title&quot;: &quot;Privacidade e acesso&quot;,
+    },
+    &quot;de&quot;: {
+        &quot;language&quot;: &quot;Sprache&quot;, &quot;username&quot;: &quot;Benutzername&quot;, &quot;password&quot;: &quot;Passwort&quot;,
+        &quot;confirm_password&quot;: &quot;Passwort bestätigen&quot;, &quot;login&quot;: &quot;Anmelden&quot;, &quot;create_account&quot;: &quot;Konto erstellen&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonymer Modus&quot;, &quot;home&quot;: &quot;Start&quot;, &quot;home_mood&quot;: &quot;Stimmung&quot;, &quot;home_chat&quot;: &quot;Mit KI sprechen&quot;,
+        &quot;home_emergency&quot;: &quot;Notfallhilfe&quot;, &quot;home_journal&quot;: &quot;Journal&quot;, &quot;home_exercises&quot;: &quot;Übungen zur Stabilisierung&quot;,
+        &quot;home_goals&quot;: &quot;Ziele und Zukunft&quot;, &quot;home_dashboard&quot;: &quot;Fortschritt&quot;, &quot;home_privacy&quot;: &quot;Privatsphäre&quot;,
+        &quot;today&quot;: &quot;Heute&quot;, &quot;home_title&quot;: &quot;Ein ruhigerer Ort für einen neuen Anfang.&quot;, &quot;companion&quot;: &quot;Begleitung&quot;,
+        &quot;talk_title&quot;: &quot;Mit SÕBRAD sprechen&quot;, &quot;settings&quot;: &quot;Einstellungen&quot;, &quot;privacy_title&quot;: &quot;Privatsphäre und Zugang&quot;,
+    },
+    &quot;fi&quot;: {
+        &quot;language&quot;: &quot;Kieli&quot;, &quot;username&quot;: &quot;Käyttäjänimi&quot;, &quot;password&quot;: &quot;Salasana&quot;,
+        &quot;confirm_password&quot;: &quot;Vahvista salasana&quot;, &quot;login&quot;: &quot;Kirjaudu&quot;, &quot;create_account&quot;: &quot;Luo tili&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonyymi tila&quot;, &quot;home&quot;: &quot;Koti&quot;, &quot;home_mood&quot;: &quot;Mieli&quot;, &quot;home_chat&quot;: &quot;Puhu AI-kumppanille&quot;,
+        &quot;home_emergency&quot;: &quot;Hätäapu&quot;, &quot;home_journal&quot;: &quot;Päiväkirja&quot;, &quot;home_exercises&quot;: &quot;Toipumisharjoitukset&quot;,
+        &quot;home_goals&quot;: &quot;Tavoitteet ja tulevaisuus&quot;, &quot;home_dashboard&quot;: &quot;Edistyminen&quot;, &quot;home_privacy&quot;: &quot;Yksityisyys&quot;,
+        &quot;today&quot;: &quot;Tänään&quot;, &quot;home_title&quot;: &quot;Rauhallisempi paikka aloittaa uudelleen.&quot;, &quot;companion&quot;: &quot;Kumppani&quot;,
+        &quot;talk_title&quot;: &quot;Puhu SÕBRADille&quot;, &quot;settings&quot;: &quot;Asetukset&quot;, &quot;privacy_title&quot;: &quot;Yksityisyys ja pääsy&quot;,
+    },
+    &quot;sv&quot;: {
+        &quot;language&quot;: &quot;Språk&quot;, &quot;username&quot;: &quot;Användarnamn&quot;, &quot;password&quot;: &quot;Lösenord&quot;,
+        &quot;confirm_password&quot;: &quot;Bekräfta lösenord&quot;, &quot;login&quot;: &quot;Logga in&quot;, &quot;create_account&quot;: &quot;Skapa konto&quot;,
+        &quot;anonymous_mode&quot;: &quot;Anonymt läge&quot;, &quot;home&quot;: &quot;Hem&quot;, &quot;home_mood&quot;: &quot;Mående&quot;, &quot;home_chat&quot;: &quot;Prata med AI&quot;,
+        &quot;home_emergency&quot;: &quot;Akut hjälp&quot;, &quot;home_journal&quot;: &quot;Journal&quot;, &quot;home_exercises&quot;: &quot;Återhämtningsövningar&quot;,
+        &quot;home_goals&quot;: &quot;Mål och framtid&quot;, &quot;home_dashboard&quot;: &quot;Framsteg&quot;, &quot;home_privacy&quot;: &quot;Integritet&quot;,
+        &quot;today&quot;: &quot;Idag&quot;, &quot;home_title&quot;: &quot;En lugnare plats att börja om.&quot;, &quot;companion&quot;: &quot;Följeslagare&quot;,
+        &quot;talk_title&quot;: &quot;Prata med SÕBRAD&quot;, &quot;settings&quot;: &quot;Inställningar&quot;, &quot;privacy_title&quot;: &quot;Integritet och åtkomst&quot;,
+    },
+    &quot;ja&quot;: {
+        &quot;language&quot;: &quot;言語&quot;, &quot;username&quot;: &quot;ユーザー名&quot;, &quot;password&quot;: &quot;パスワード&quot;,
+        &quot;confirm_password&quot;: &quot;パスワード確認&quot;, &quot;login&quot;: &quot;ログイン&quot;, &quot;create_account&quot;: &quot;アカウント作成&quot;,
+        &quot;anonymous_mode&quot;: &quot;匿名モード&quot;, &quot;home&quot;: &quot;ホーム&quot;, &quot;home_mood&quot;: &quot;気分チェック&quot;, &quot;home_chat&quot;: &quot;AIコンパニオンと話す&quot;,
+        &quot;home_emergency&quot;: &quot;緊急ヘルプ&quot;, &quot;home_journal&quot;: &quot;日記&quot;, &quot;home_exercises&quot;: &quot;回復エクササイズ&quot;,
+        &quot;home_goals&quot;: &quot;目標と未来&quot;, &quot;home_dashboard&quot;: &quot;進捗&quot;, &quot;home_privacy&quot;: &quot;プライバシー&quot;,
+        &quot;today&quot;: &quot;今日&quot;, &quot;home_title&quot;: &quot;もう一度始めるための静かな場所。&quot;, &quot;companion&quot;: &quot;コンパニオン&quot;,
+        &quot;talk_title&quot;: &quot;SÕBRAD と話す&quot;, &quot;settings&quot;: &quot;設定&quot;, &quot;privacy_title&quot;: &quot;プライバシーとアクセス&quot;,
+    },
+}
+
+GROUNDING_PROMPTS = [
+    &quot;Name five things you can see. Let your eyes move slowly.&quot;,
+    &quot;Name four things you can feel. Notice texture, pressure, and temperature.&quot;,
+    &quot;Name three things you can hear. Let the sounds arrive without chasing them.&quot;,
+    &quot;Name two things you can smell. If nothing is there, choose two scents you like.&quot;,
+    &quot;Name one thing you can taste. Then take one slower breath.&quot;,
+]
+
+
+def default_state():
+    return {
+        &quot;accepted_disclaimer&quot;: False,
+        &quot;language&quot;: &quot;en&quot;,
+        &quot;user&quot;: None,
+        &quot;anonymous&quot;: False,
+        &quot;moods&quot;: [],
+        &quot;chat&quot;: [],
+        &quot;journal&quot;: [],
+        &quot;goals&quot;: [],
+        &quot;completed_goals&quot;: 0,
+        &quot;triggers&quot;: [],
+        &quot;safety&quot;: {&quot;trusted&quot;: &quot;&quot;, &quot;place&quot;: &quot;&quot;, &quot;action&quot;: &quot;&quot;},
+        &quot;skills&quot;: {&quot;breathing&quot;: 0, &quot;grounding&quot;: 0},
+    }
+
+
+def load_state():
+    if not DATA_FILE.exists():
+        return default_state()
+    try:
+        loaded = json.loads(DATA_FILE.read_text(encoding=&quot;utf-8&quot;))
+        state = default_state()
+        state.update(loaded)
+        return state
+    except Exception:
+        return default_state()
+
+
+def save_state(state):
+    DATA_FILE.write_text(json.dumps(state, indent=2), encoding=&quot;utf-8&quot;)
+
+
+def password_hash(username, password):
+    return hashlib.sha256(f&quot;{username}:{password}&quot;.encode(&quot;utf-8&quot;)).hexdigest()
+
+
+def b64(data):
+    return base64.b64encode(data).decode(&quot;ascii&quot;)
+
+
+def from_b64(data):
+    return base64.b64decode(data.encode(&quot;ascii&quot;))
+
+
+def derive_key(pin, salt):
+    return hashlib.pbkdf2_hmac(&quot;sha256&quot;, pin.encode(&quot;utf-8&quot;), salt, 210_000, dklen=32)
+
+
+def stream_bytes(key, nonce, length):
+    chunks = []
+    counter = 0
+    while sum(len(chunk) for chunk in chunks) &lt; length:
+        counter_bytes = counter.to_bytes(8, &quot;big&quot;)
+        chunks.append(hmac.new(key, nonce + counter_bytes, hashlib.sha256).digest())
+        counter += 1
+    return b&quot;&quot;.join(chunks)[:length]
+
+
+def encrypt_note(pin, text):
+    salt = secrets.token_bytes(16)
+    nonce = secrets.token_bytes(16)
+    key = derive_key(pin, salt)
+    plain = text.encode(&quot;utf-8&quot;)
+    mask = stream_bytes(key, nonce, len(plain))
+    cipher = bytes(a ^ b for a, b in zip(plain, mask))
+    tag = hmac.new(key, nonce + cipher, hashlib.sha256).digest()
+    return {&quot;salt&quot;: b64(salt), &quot;nonce&quot;: b64(nonce), &quot;data&quot;: b64(cipher), &quot;tag&quot;: b64(tag)}
+
+
+def decrypt_note(pin, entry):
+    salt = from_b64(entry[&quot;salt&quot;])
+    nonce = from_b64(entry[&quot;nonce&quot;])
+    cipher = from_b64(entry[&quot;data&quot;])
+    tag = from_b64(entry[&quot;tag&quot;])
+    key = derive_key(pin, salt)
+    expected = hmac.new(key, nonce + cipher, hashlib.sha256).digest()
+    if not hmac.compare_digest(tag, expected):
+        raise ValueError(&quot;Wrong PIN or damaged journal entry.&quot;)
+    mask = stream_bytes(key, nonce, len(cipher))
+    plain = bytes(a ^ b for a, b in zip(cipher, mask))
+    return plain.decode(&quot;utf-8&quot;)
+
+
+class CircleOption(tk.Canvas):
+    def __init__(self, parent, text, command):
+        super().__init__(
+            parent,
+            width=160,
+            height=160,
+            bg=BACKGROUND,
+            highlightthickness=0,
+            cursor=&quot;hand2&quot;,
+        )
+        self.command = command
+        self.create_oval(8, 8, 152, 152, fill=OPTION_BUTTON, outline=NAVY, width=2)
+        self.create_text(
+            80,
+            80,
+            text=text,
+            fill=NAVY,
+            font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;),
+            width=118,
+            justify=&quot;center&quot;,
+        )
+        self.bind(&quot;&lt;Button-1&gt;&quot;, lambda event: self.command())
+        self.bind(&quot;&lt;Enter&gt;&quot;, lambda event: self.configure(bg=SOFT))
+        self.bind(&quot;&lt;Leave&gt;&quot;, lambda event: self.configure(bg=BACKGROUND))
+
+
+class SobradApp:
+    def __init__(self, root):
+        self.root = root
+        self.state = load_state()
+        self.content = None
+        self.breathing = False
+        self.breath_phase = 0
+        self.grounding_index = 0
+        self.root.title(APP_NAME)
+        self.root.geometry(&quot;1120x760&quot;)
+        self.root.minsize(900, 620)
+        self.root.configure(bg=BACKGROUND)
+        self.show_login()
+
+    def clear(self):
+        for child in self.root.winfo_children():
+            child.destroy()
+
+    def tr(self, key):
+        language = self.state.get(&quot;language&quot;, &quot;en&quot;)
+        return TRANSLATIONS.get(language, {}).get(key, TRANSLATIONS[&quot;en&quot;].get(key, key))
+
+    def language_display(self):
+        return LANGUAGE_LABELS.get(self.state.get(&quot;language&quot;, &quot;en&quot;), LANGUAGE_LABELS[&quot;en&quot;])
+
+    def set_language_from_label(self, label, refresh=None):
+        self.state[&quot;language&quot;] = LANGUAGE_CODES.get(label, &quot;en&quot;)
+        save_state(self.state)
+        if refresh == &quot;login&quot;:
+            self.show_login()
+        elif refresh:
+            self.show_shell(refresh)
+
+    def language_selector(self, parent, refresh=None):
+        frame = tk.Frame(parent, bg=parent[&quot;bg&quot;])
+        tk.Label(frame, text=self.tr(&quot;language&quot;), fg=NAVY, bg=parent[&quot;bg&quot;], font=(&quot;Google Sans&quot;, 10, &quot;bold&quot;)).pack(side=&quot;left&quot;, padx=(0, 8))
+        value = tk.StringVar(value=self.language_display())
+        menu = tk.OptionMenu(frame, value, *[label for _, label in LANGUAGES], command=lambda label: self.set_language_from_label(label, refresh))
+        menu.configure(bg=BACKGROUND, fg=NAVY, activebackground=SOFT, relief=&quot;flat&quot;, highlightbackground=LINE)
+        menu[&quot;menu&quot;].configure(bg=BACKGROUND, fg=NAVY)
+        menu.pack(side=&quot;left&quot;)
+        return frame
+
+    def label(self, parent, text, size=12, color=TEXT, bold=False, **grid):
+        font = (&quot;Google Sans&quot;, size, &quot;bold&quot; if bold else &quot;normal&quot;)
+        widget = tk.Label(parent, text=text, fg=color, bg=parent[&quot;bg&quot;], font=font, wraplength=760, justify=&quot;left&quot;)
+        widget.grid(**grid)
+        return widget
+
+    def button(self, parent, text, command, bg=TITLE, fg=&quot;white&quot;):
+        return tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=bg,
+            fg=fg,
+            activebackground=bg,
+            activeforeground=fg,
+            relief=&quot;flat&quot;,
+            padx=16,
+            pady=10,
+            bd=0,
+            font=(&quot;Google Sans&quot;, 10, &quot;bold&quot;),
+            cursor=&quot;hand2&quot;,
+        )
+
+    def show_login(self):
+        self.clear()
+        self.root.configure(bg=BACKGROUND)
+
+        outer = tk.Frame(self.root, bg=BACKGROUND, padx=42, pady=42)
+        outer.pack(fill=&quot;both&quot;, expand=True)
+        outer.columnconfigure(0, weight=1)
+        outer.columnconfigure(1, weight=1)
+
+        left = tk.Frame(outer, bg=BACKGROUND)
+        left.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=(0, 30))
+        tk.Label(left, text=&quot;G&#x27;day... Tsau...&quot;, fg=NAVY, bg=BACKGROUND, font=(&quot;Inter&quot;, 12, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        tk.Label(left, text=APP_NAME, fg=TITLE, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 54, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(8, 12))
+        tk.Label(
+            left,
+            text=random.choice(SUBTITLES),
+            fg=MUTED,
+            bg=BACKGROUND,
+            font=(&quot;Inter&quot;, 14),
+            wraplength=520,
+            justify=&quot;left&quot;,
+        ).pack(anchor=&quot;w&quot;)
+
+        form = tk.Frame(outer, bg=SOFT, padx=24, pady=24, highlightbackground=LINE, highlightthickness=1)
+        form.grid(row=0, column=1, sticky=&quot;nsew&quot;)
+        form.columnconfigure(0, weight=1)
+
+        tk.Label(form, text=self.tr(&quot;username&quot;), fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).grid(row=0, column=0, sticky=&quot;w&quot;)
+        username = tk.Entry(form, font=(&quot;Google Sans&quot;, 12), relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        username.grid(row=1, column=0, sticky=&quot;ew&quot;, pady=(6, 16), ipady=8)
+
+        tk.Label(form, text=self.tr(&quot;password&quot;), fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).grid(row=2, column=0, sticky=&quot;w&quot;)
+        password = tk.Entry(form, show=&quot;*&quot;, font=(&quot;Google Sans&quot;, 12), relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        password.grid(row=3, column=0, sticky=&quot;ew&quot;, pady=(6, 18), ipady=8)
+
+        def login():
+            name = username.get().strip()
+            pwd = password.get()
+            if not name or not pwd:
+                messagebox.showwarning(APP_NAME, &quot;Enter a username and password.&quot;)
+                return
+            stored = self.state.get(&quot;user&quot;)
+            if not stored:
+                messagebox.showinfo(APP_NAME, &quot;No account exists yet. Choose Create account first.&quot;)
+                return
+            pwd_hash = password_hash(name, pwd)
+            if stored.get(&quot;username&quot;) != name:
+                messagebox.showerror(APP_NAME, &quot;This local app already has a different username.&quot;)
+                return
+            if stored.get(&quot;password_hash&quot;) != pwd_hash:
+                messagebox.showerror(APP_NAME, &quot;That password does not match this local profile.&quot;)
+                return
+            self.state[&quot;anonymous&quot;] = False
+            save_state(self.state)
+            self.show_shell(&quot;home&quot;)
+
+        def anonymous():
+            self.state[&quot;anonymous&quot;] = True
+            save_state(self.state)
+            self.show_shell(&quot;home&quot;)
+
+        self.button(form, self.tr(&quot;login&quot;), login).grid(row=4, column=0, sticky=&quot;ew&quot;, pady=(0, 10))
+        self.button(form, self.tr(&quot;create_account&quot;), self.show_create_account, bg=OPTION_BUTTON, fg=NAVY).grid(row=5, column=0, sticky=&quot;ew&quot;, pady=(0, 10))
+        self.button(form, self.tr(&quot;anonymous_mode&quot;), anonymous, bg=OPTION_BUTTON, fg=NAVY).grid(row=6, column=0, sticky=&quot;ew&quot;)
+        self.language_selector(form, refresh=&quot;login&quot;).grid(row=7, column=0, sticky=&quot;w&quot;, pady=(18, 0))
+
+    def show_create_account(self):
+        if self.state.get(&quot;user&quot;):
+            messagebox.showinfo(APP_NAME, &quot;A local account already exists. Use Privacy to delete all data before creating a new one.&quot;)
+            return
+        modal = tk.Toplevel(self.root)
+        modal.title(self.tr(&quot;create_account&quot;))
+        modal.configure(bg=BACKGROUND)
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.geometry(&quot;460x360&quot;)
+        modal.columnconfigure(0, weight=1)
+        tk.Label(modal, text=self.tr(&quot;create_account&quot;), fg=TITLE, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 24, &quot;bold&quot;)).grid(row=0, column=0, sticky=&quot;w&quot;, padx=24, pady=(24, 14))
+
+        fields = tk.Frame(modal, bg=BACKGROUND, padx=24)
+        fields.grid(row=1, column=0, sticky=&quot;ew&quot;)
+        fields.columnconfigure(0, weight=1)
+        tk.Label(fields, text=self.tr(&quot;username&quot;), fg=NAVY, bg=BACKGROUND, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).grid(row=0, column=0, sticky=&quot;w&quot;)
+        username = tk.Entry(fields, font=(&quot;Google Sans&quot;, 12), relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        username.grid(row=1, column=0, sticky=&quot;ew&quot;, pady=(6, 14), ipady=7)
+        tk.Label(fields, text=self.tr(&quot;password&quot;), fg=NAVY, bg=BACKGROUND, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).grid(row=2, column=0, sticky=&quot;w&quot;)
+        password = tk.Entry(fields, show=&quot;*&quot;, font=(&quot;Google Sans&quot;, 12), relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        password.grid(row=3, column=0, sticky=&quot;ew&quot;, pady=(6, 14), ipady=7)
+        tk.Label(fields, text=self.tr(&quot;confirm_password&quot;), fg=NAVY, bg=BACKGROUND, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).grid(row=4, column=0, sticky=&quot;w&quot;)
+        confirm = tk.Entry(fields, show=&quot;*&quot;, font=(&quot;Google Sans&quot;, 12), relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        confirm.grid(row=5, column=0, sticky=&quot;ew&quot;, pady=(6, 18), ipady=7)
+
+        def create():
+            name = username.get().strip()
+            pwd = password.get()
+            confirm_pwd = confirm.get()
+            if not name or not pwd:
+                messagebox.showwarning(APP_NAME, &quot;Enter a username and password.&quot;)
+                return
+            if len(pwd) &lt; 6:
+                messagebox.showwarning(APP_NAME, &quot;Use at least 6 characters for the password.&quot;)
+                return
+            if pwd != confirm_pwd:
+                messagebox.showerror(APP_NAME, &quot;The passwords do not match.&quot;)
+                return
+            self.state[&quot;user&quot;] = {&quot;username&quot;: name, &quot;password_hash&quot;: password_hash(name, pwd), &quot;created&quot;: time.time()}
+            self.state[&quot;anonymous&quot;] = False
+            save_state(self.state)
+            modal.destroy()
+            self.show_shell(&quot;home&quot;)
+
+        self.button(modal, self.tr(&quot;create_account&quot;), create).grid(row=2, column=0, sticky=&quot;e&quot;, padx=24, pady=20)
+
+    def show_disclaimer_if_needed(self):
+        if self.state.get(&quot;accepted_disclaimer&quot;):
+            return
+        modal = tk.Toplevel(self.root)
+        modal.title(&quot;Before you begin&quot;)
+        modal.configure(bg=BACKGROUND)
+        modal.transient(self.root)
+        modal.grab_set()
+        modal.geometry(&quot;520x300&quot;)
+        tk.Label(modal, text=&quot;Before you begin&quot;, fg=TITLE, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 24, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, padx=24, pady=(24, 8))
+        tk.Label(
+            modal,
+            text=(
+                &quot;SÕBRAD is not a replacement for professional medical, psychological, or emergency care. &quot;
+                &quot;It can help you slow down, write privately, and choose a next step.&quot;
+            ),
+            fg=TEXT,
+            bg=BACKGROUND,
+            font=(&quot;Google Sans&quot;, 12),
+            wraplength=460,
+            justify=&quot;left&quot;,
+        ).pack(anchor=&quot;w&quot;, padx=24, pady=(0, 16))
+        agreed = tk.BooleanVar(value=False)
+        tk.Checkbutton(modal, text=&quot;I understand.&quot;, variable=agreed, fg=NAVY, bg=BACKGROUND, activebackground=BACKGROUND).pack(anchor=&quot;w&quot;, padx=24)
+
+        def accept():
+            if not agreed.get():
+                messagebox.showwarning(APP_NAME, &quot;Please check &#x27;I understand&#x27; first.&quot;)
+                return
+            self.state[&quot;accepted_disclaimer&quot;] = True
+            save_state(self.state)
+            modal.destroy()
+
+        self.button(modal, &quot;Continue&quot;, accept).pack(anchor=&quot;e&quot;, padx=24, pady=20)
+
+    def show_shell(self, view):
+        self.current_view = view
+        self.clear()
+        header = tk.Frame(self.root, bg=BACKGROUND, padx=18, pady=12, highlightbackground=LINE, highlightthickness=1)
+        header.pack(fill=&quot;x&quot;)
+        tk.Label(header, text=APP_NAME, fg=NAVY, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 18, &quot;bold&quot;)).pack(side=&quot;left&quot;, padx=(0, 18))
+        self.language_selector(header, refresh=view).pack(side=&quot;right&quot;)
+        for key, label_key in [(&quot;home&quot;, &quot;home&quot;)] + HOME_OPTIONS:
+            label = self.tr(label_key)
+            tk.Button(
+                header,
+                text=label.split(&quot; and &quot;)[0],
+                command=lambda key=key: self.show_shell(key),
+                fg=NAVY,
+                bg=BACKGROUND,
+                activebackground=SOFT,
+                relief=&quot;flat&quot;,
+                padx=8,
+                pady=6,
+                font=(&quot;Google Sans&quot;, 9, &quot;bold&quot;),
+                cursor=&quot;hand2&quot;,
+            ).pack(side=&quot;left&quot;)
+
+        self.content = tk.Frame(self.root, bg=BACKGROUND, padx=26, pady=24)
+        self.content.pack(fill=&quot;both&quot;, expand=True)
+        getattr(self, f&quot;page_{view}&quot;)()
+        self.show_disclaimer_if_needed()
+
+    def page_title(self, eyebrow, title, subtitle=None):
+        tk.Label(self.content, text=eyebrow.upper(), fg=NAVY, bg=BACKGROUND, font=(&quot;Inter&quot;, 10, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        tk.Label(self.content, text=title, fg=TITLE, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 32, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(4, 8))
+        if subtitle:
+            tk.Label(self.content, text=subtitle, fg=MUTED, bg=BACKGROUND, font=(&quot;Inter&quot;, 12), wraplength=860, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(0, 18))
+
+    def page_home(self):
+        name = &quot;Anonymous&quot; if self.state.get(&quot;anonymous&quot;) else self.state.get(&quot;user&quot;, {}).get(&quot;username&quot;, &quot;&quot;)
+        greeting = self.tr(&quot;home_hint&quot;) if name else self.tr(&quot;home_hint_new&quot;)
+        self.page_title(self.tr(&quot;today&quot;), self.tr(&quot;home_title&quot;), greeting)
+        grid = tk.Frame(self.content, bg=BACKGROUND)
+        grid.pack(fill=&quot;both&quot;, expand=True, pady=8)
+        for index, (key, label_key) in enumerate(HOME_OPTIONS):
+            row, col = divmod(index, 4)
+            cell = tk.Frame(grid, bg=BACKGROUND, padx=12, pady=12)
+            cell.grid(row=row, column=col, sticky=&quot;nsew&quot;)
+            grid.columnconfigure(col, weight=1)
+            grid.rowconfigure(row, weight=1)
+            CircleOption(cell, self.tr(label_key), lambda key=key: self.show_shell(key)).pack()
+
+    def page_mood(self):
+        self.page_title(&quot;Check-in&quot;, &quot;How is this moment?&quot;)
+        body = tk.Frame(self.content, bg=BACKGROUND)
+        body.pack(fill=&quot;both&quot;, expand=True)
+        left = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        left.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True, padx=(0, 12))
+        right = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        right.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True)
+
+        tk.Label(left, text=&quot;Mood level&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        mood_value = tk.IntVar(value=5)
+        tk.Scale(left, from_=1, to=10, orient=&quot;horizontal&quot;, variable=mood_value, bg=SOFT, fg=NAVY, highlightthickness=0).pack(fill=&quot;x&quot;)
+        tk.Label(left, text=&quot;What is present?&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(12, 4))
+        words = [&quot;numb&quot;, &quot;afraid&quot;, &quot;angry&quot;, &quot;sad&quot;, &quot;tired&quot;, &quot;hopeful&quot;, &quot;steady&quot;, &quot;alone&quot;]
+        selected = {word: tk.BooleanVar(value=False) for word in words}
+        chips = tk.Frame(left, bg=SOFT)
+        chips.pack(anchor=&quot;w&quot;)
+        for word in words:
+            tk.Checkbutton(chips, text=word, variable=selected[word], bg=SOFT, fg=NAVY, activebackground=SOFT).pack(side=&quot;left&quot;, padx=(0, 6))
+        tk.Label(left, text=&quot;Note&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(12, 4))
+        note = tk.Text(left, height=5, wrap=&quot;word&quot;, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        note.pack(fill=&quot;x&quot;)
+
+        def save_mood():
+            self.state[&quot;moods&quot;].insert(0, {
+                &quot;value&quot;: mood_value.get(),
+                &quot;words&quot;: [word for word in words if selected[word].get()],
+                &quot;note&quot;: note.get(&quot;1.0&quot;, &quot;end&quot;).strip(),
+                &quot;time&quot;: time.time(),
+            })
+            self.state[&quot;moods&quot;] = self.state[&quot;moods&quot;][:60]
+            save_state(self.state)
+            self.show_shell(&quot;mood&quot;)
+
+        self.button(left, &quot;Save check-in&quot;, save_mood).pack(anchor=&quot;e&quot;, pady=12)
+        tk.Label(right, text=&quot;Recent moods&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 13, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        self.draw_mood_chart(right)
+        for entry in self.state[&quot;moods&quot;][:6]:
+            words_text = &quot;, &quot;.join(entry.get(&quot;words&quot;, []))
+            note_text = entry.get(&quot;note&quot;, &quot;&quot;)
+            tk.Label(right, text=f&quot;{entry[&#x27;value&#x27;]}/10  {words_text}  {note_text}&quot;, fg=TEXT, bg=SOFT, wraplength=430, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=3)
+
+    def draw_mood_chart(self, parent):
+        canvas = tk.Canvas(parent, width=430, height=170, bg=BACKGROUND, highlightbackground=LINE, highlightthickness=1)
+        canvas.pack(fill=&quot;x&quot;, pady=12)
+        moods = list(reversed(self.state[&quot;moods&quot;][:12]))
+        for i in range(1, 6):
+            y = 20 + i * 25
+            canvas.create_line(24, y, 400, y, fill=LINE)
+        if len(moods) &lt; 2:
+            canvas.create_text(210, 85, text=&quot;No mood check-ins yet.&quot;, fill=MUTED)
+            return
+        points = []
+        for index, item in enumerate(moods):
+            x = 28 + index * (360 / max(len(moods) - 1, 1))
+            y = 145 - ((item[&quot;value&quot;] - 1) / 9) * 120
+            points.append((x, y))
+        for start, end in zip(points, points[1:]):
+            canvas.create_line(*start, *end, fill=TITLE, width=3)
+        for x, y in points:
+            canvas.create_oval(x - 4, y - 4, x + 4, y + 4, fill=TITLE, outline=TITLE)
+
+    def page_chat(self):
+        self.page_title(self.tr(&quot;companion&quot;), self.tr(&quot;talk_title&quot;))
+        if not self.state[&quot;chat&quot;]:
+            self.state[&quot;chat&quot;].append({&quot;role&quot;: &quot;bot&quot;, &quot;text&quot;: &quot;I am here. We can go slowly. What is the smallest thing you want help carrying right now?&quot;})
+            save_state(self.state)
+
+        chat_outer = tk.Frame(self.content, bg=SOFT, highlightbackground=LINE, highlightthickness=1)
+        chat_outer.pack(fill=&quot;both&quot;, expand=True, pady=(0, 12))
+        chat_canvas = tk.Canvas(chat_outer, bg=SOFT, highlightthickness=0)
+        chat_scrollbar = tk.Scrollbar(chat_outer, orient=&quot;vertical&quot;, command=chat_canvas.yview)
+        chat_messages = tk.Frame(chat_canvas, bg=SOFT)
+        chat_window = chat_canvas.create_window((0, 0), window=chat_messages, anchor=&quot;nw&quot;)
+        chat_canvas.configure(yscrollcommand=chat_scrollbar.set)
+        chat_canvas.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True)
+        chat_scrollbar.pack(side=&quot;right&quot;, fill=&quot;y&quot;)
+
+        def resize_messages(event):
+            chat_canvas.itemconfigure(chat_window, width=event.width)
+
+        def update_scroll_region(event=None):
+            chat_canvas.configure(scrollregion=chat_canvas.bbox(&quot;all&quot;))
+
+        chat_canvas.bind(&quot;&lt;Configure&gt;&quot;, resize_messages)
+        chat_messages.bind(&quot;&lt;Configure&gt;&quot;, update_scroll_region)
+        for message in self.state[&quot;chat&quot;]:
+            self.chat_bubble(chat_messages, message)
+        self.root.after(80, lambda: chat_canvas.yview_moveto(1.0))
+
+        bottom = tk.Frame(self.content, bg=BACKGROUND)
+        bottom.pack(fill=&quot;x&quot;)
+        entry = tk.Text(bottom, height=3, wrap=&quot;word&quot;, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        entry.pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True, padx=(0, 10))
+
+        def send():
+            text = entry.get(&quot;1.0&quot;, &quot;end&quot;).strip()
+            if not text:
+                return
+            crisis = any(re.search(pattern, text, re.IGNORECASE) for pattern in CRISIS_PATTERNS)
+            self.state[&quot;chat&quot;].append({&quot;role&quot;: &quot;user&quot;, &quot;text&quot;: text})
+            self.state[&quot;chat&quot;].append({&quot;role&quot;: &quot;bot&quot;, &quot;text&quot;: self.companion_reply(text, crisis)})
+            self.state[&quot;chat&quot;] = self.state[&quot;chat&quot;][-80:]
+            save_state(self.state)
+            if crisis:
+                self.show_crisis_dialog()
+            self.show_shell(&quot;chat&quot;)
+
+        self.button(bottom, &quot;Send&quot;, send).pack(side=&quot;right&quot;)
+
+    def chat_bubble(self, parent, message):
+        role = message.get(&quot;role&quot;, &quot;bot&quot;)
+        is_user = role == &quot;user&quot;
+        row = tk.Frame(parent, bg=SOFT)
+        row.pack(fill=&quot;x&quot;, padx=14, pady=7)
+
+        bubble_bg = TITLE if is_user else BACKGROUND
+        bubble_fg = &quot;white&quot; if is_user else TEXT
+        name = &quot;You&quot; if is_user else APP_NAME
+        side = &quot;right&quot; if is_user else &quot;left&quot;
+        anchor = &quot;e&quot; if is_user else &quot;w&quot;
+
+        bubble = tk.Frame(row, bg=bubble_bg, padx=14, pady=10, highlightbackground=LINE, highlightthickness=0)
+        bubble.pack(side=side, anchor=anchor)
+        tk.Label(
+            bubble,
+            text=name,
+            fg=bubble_fg,
+            bg=bubble_bg,
+            font=(&quot;Google Sans&quot;, 9, &quot;bold&quot;),
+            justify=&quot;left&quot;,
+        ).pack(anchor=&quot;w&quot;)
+        tk.Label(
+            bubble,
+            text=message.get(&quot;text&quot;, &quot;&quot;),
+            fg=bubble_fg,
+            bg=bubble_bg,
+            font=(&quot;Google Sans&quot;, 11),
+            wraplength=560,
+            justify=&quot;left&quot;,
+        ).pack(anchor=&quot;w&quot;)
+
+    def companion_reply(self, text, crisis):
+        lower = text.lower()
+        if crisis:
+            return &quot;I am taking this seriously. Move near another person if you can and contact 9-8-8 now. I can stay with you for one grounding step too.&quot;
+        if any(word in lower for word in [&quot;panic&quot;, &quot;anxious&quot;, &quot;anxiety&quot;, &quot;overwhelmed&quot;, &quot;flashback&quot;, &quot;scared&quot;]):
+            return &quot;Let us shrink the moment. Name five things you can see, then press your feet into the floor and exhale longer than you inhale.&quot;
+        if any(word in lower for word in [&quot;sad&quot;, &quot;alone&quot;, &quot;lonely&quot;, &quot;worthless&quot;, &quot;ashamed&quot;, &quot;cry&quot;, &quot;tired&quot;]):
+            return &quot;That sounds heavy. You do not have to turn it into a perfect sentence. Tell me one detail of what hurts most right now.&quot;
+        if any(word in lower for word in [&quot;study&quot;, &quot;school&quot;, &quot;work&quot;, &quot;career&quot;, &quot;goal&quot;, &quot;future&quot;, &quot;job&quot;]):
+            return &quot;A future can start very small. Choose one step that takes less than ten minutes, then let that count.&quot;
+        return &quot;I hear you. Let us make this moment smaller: what is one thing your body needs in the next five minutes?&quot;
+
+    def show_crisis_dialog(self):
+        modal = tk.Toplevel(self.root)
+        modal.title(&quot;Emergency help&quot;)
+        modal.configure(bg=BACKGROUND)
+        modal.geometry(&quot;560x330&quot;)
+        modal.transient(self.root)
+        modal.grab_set()
+        tk.Label(modal, text=&quot;You do not have to handle this alone.&quot;, fg=TITLE, bg=BACKGROUND, font=(&quot;Avenir Next&quot;, 22, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, padx=24, pady=(24, 8))
+        tk.Label(modal, text=&quot;If there is immediate danger, call emergency services now. For suicide crisis support in Canada, contact 9-8-8.&quot;, fg=TEXT, bg=BACKGROUND, wraplength=500, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, padx=24)
+        row = tk.Frame(modal, bg=BACKGROUND)
+        row.pack(anchor=&quot;w&quot;, padx=24, pady=18)
+        self.button(row, &quot;Call 988&quot;, lambda: webbrowser.open(&quot;tel:988&quot;)).pack(side=&quot;left&quot;, padx=(0, 8))
+        self.button(row, &quot;Text 988&quot;, lambda: webbrowser.open(&quot;sms:988&quot;), bg=OPTION_BUTTON, fg=NAVY).pack(side=&quot;left&quot;, padx=(0, 8))
+        self.button(row, &quot;988.ca&quot;, lambda: webbrowser.open(&quot;https://988.ca/&quot;), bg=OPTION_BUTTON, fg=NAVY).pack(side=&quot;left&quot;)
+        self.button(modal, &quot;Ground for one minute&quot;, lambda: [modal.destroy(), self.show_shell(&quot;exercises&quot;)], bg=OPTION_BUTTON, fg=NAVY).pack(anchor=&quot;w&quot;, padx=24)
+        self.button(modal, &quot;I am safe for now&quot;, modal.destroy, bg=BACKGROUND, fg=NAVY).pack(anchor=&quot;e&quot;, padx=24, pady=16)
+
+    def page_emergency(self):
+        self.page_title(&quot;Urgent care&quot;, &quot;Emergency help&quot;)
+        box = tk.Frame(self.content, bg=SOFT, padx=20, pady=20, highlightbackground=LINE, highlightthickness=1)
+        box.pack(fill=&quot;x&quot;, pady=(0, 14))
+        tk.Label(box, text=&quot;9-8-8: Suicide Crisis Helpline&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        tk.Label(box, text=&quot;Live support by phone and text across Canada, in English and French, 24 hours a day.&quot;, fg=TEXT, bg=SOFT, wraplength=780, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=8)
+        row = tk.Frame(box, bg=SOFT)
+        row.pack(anchor=&quot;w&quot;)
+        self.button(row, &quot;Call 988&quot;, lambda: webbrowser.open(&quot;tel:988&quot;)).pack(side=&quot;left&quot;, padx=(0, 8))
+        self.button(row, &quot;Text 988&quot;, lambda: webbrowser.open(&quot;sms:988&quot;), bg=OPTION_BUTTON, fg=NAVY).pack(side=&quot;left&quot;, padx=(0, 8))
+        self.button(row, &quot;Open 988.ca&quot;, lambda: webbrowser.open(&quot;https://988.ca/&quot;), bg=OPTION_BUTTON, fg=NAVY).pack(side=&quot;left&quot;)
+
+        plan = tk.Frame(self.content, bg=SOFT, padx=20, pady=20, highlightbackground=LINE, highlightthickness=1)
+        plan.pack(fill=&quot;x&quot;)
+        tk.Label(plan, text=&quot;Safety plan&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).grid(row=0, column=0, sticky=&quot;w&quot;, columnspan=2)
+        fields = [(&quot;trusted&quot;, &quot;Trusted person&quot;), (&quot;place&quot;, &quot;Safe place&quot;), (&quot;action&quot;, &quot;Calming action&quot;)]
+        entries = {}
+        for row_index, (key, label) in enumerate(fields, start=1):
+            tk.Label(plan, text=label, fg=NAVY, bg=SOFT).grid(row=row_index, column=0, sticky=&quot;w&quot;, pady=8)
+            entry = tk.Entry(plan, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+            entry.insert(0, self.state[&quot;safety&quot;].get(key, &quot;&quot;))
+            entry.grid(row=row_index, column=1, sticky=&quot;ew&quot;, pady=8, ipady=6)
+            entries[key] = entry
+        plan.columnconfigure(1, weight=1)
+
+        def save_plan():
+            self.state[&quot;safety&quot;] = {key: entry.get().strip() for key, entry in entries.items()}
+            save_state(self.state)
+            messagebox.showinfo(APP_NAME, &quot;Saved.&quot;)
+
+        self.button(plan, &quot;Save plan&quot;, save_plan).grid(row=4, column=1, sticky=&quot;e&quot;, pady=8)
+
+    def page_journal(self):
+        self.page_title(&quot;Private space&quot;, &quot;Encrypted journal&quot;)
+        body = tk.Frame(self.content, bg=BACKGROUND)
+        body.pack(fill=&quot;both&quot;, expand=True)
+        left = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        left.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True, padx=(0, 12))
+        right = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        right.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True)
+        tk.Label(left, text=&quot;Journal PIN&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        pin = tk.Entry(left, show=&quot;*&quot;, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        pin.pack(fill=&quot;x&quot;, ipady=7, pady=(4, 12))
+        tk.Label(left, text=&quot;Entry&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        entry = tk.Text(left, height=12, wrap=&quot;word&quot;, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        entry.pack(fill=&quot;both&quot;, expand=True, pady=(4, 12))
+
+        def save_entry():
+            value = entry.get(&quot;1.0&quot;, &quot;end&quot;).strip()
+            if len(pin.get()) &lt; 4 or not value:
+                messagebox.showwarning(APP_NAME, &quot;Enter a PIN with at least 4 digits and a journal entry.&quot;)
+                return
+            encrypted = encrypt_note(pin.get(), value)
+            encrypted[&quot;time&quot;] = time.time()
+            self.state[&quot;journal&quot;].insert(0, encrypted)
+            save_state(self.state)
+            self.show_shell(&quot;journal&quot;)
+
+        self.button(left, &quot;Save encrypted entry&quot;, save_entry).pack(anchor=&quot;e&quot;)
+        tk.Label(right, text=&quot;Entries&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        output = scrolledtext.ScrolledText(right, height=18, wrap=&quot;word&quot;, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        output.pack(fill=&quot;both&quot;, expand=True, pady=8)
+        output.insert(&quot;end&quot;, &quot;Entries are encrypted. Enter your PIN on the left and unlock them here.\n&quot;)
+        output.configure(state=&quot;disabled&quot;)
+
+        def unlock():
+            output.configure(state=&quot;normal&quot;)
+            output.delete(&quot;1.0&quot;, &quot;end&quot;)
+            try:
+                for item in self.state[&quot;journal&quot;]:
+                    text = decrypt_note(pin.get(), item)
+                    stamp = time.strftime(&quot;%Y-%m-%d %H:%M&quot;, time.localtime(item[&quot;time&quot;]))
+                    output.insert(&quot;end&quot;, f&quot;{stamp}\n{text}\n\n&quot;)
+                if not self.state[&quot;journal&quot;]:
+                    output.insert(&quot;end&quot;, &quot;No entries yet.&quot;)
+            except Exception:
+                output.insert(&quot;end&quot;, &quot;That PIN did not unlock the entries.&quot;)
+            output.configure(state=&quot;disabled&quot;)
+
+        self.button(right, &quot;Unlock&quot;, unlock, bg=OPTION_BUTTON, fg=NAVY).pack(anchor=&quot;e&quot;)
+
+    def page_exercises(self):
+        self.page_title(&quot;Body and mind&quot;, &quot;Recovery exercises&quot;)
+        body = tk.Frame(self.content, bg=BACKGROUND)
+        body.pack(fill=&quot;both&quot;, expand=True)
+        for col in range(3):
+            body.columnconfigure(col, weight=1)
+        self.exercise_breathing(body, 0)
+        self.exercise_grounding(body, 1)
+        self.exercise_triggers(body, 2)
+
+    def exercise_breathing(self, parent, col):
+        frame = tk.Frame(parent, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        frame.grid(row=0, column=col, sticky=&quot;nsew&quot;, padx=8)
+        tk.Label(frame, text=&quot;Breathing&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        canvas = tk.Canvas(frame, width=190, height=190, bg=SOFT, highlightthickness=0)
+        canvas.pack(pady=18)
+        circle = canvas.create_oval(25, 25, 165, 165, outline=TITLE, width=3, fill=BACKGROUND)
+        label = canvas.create_text(95, 95, text=&quot;Inhale&quot;, fill=NAVY, font=(&quot;Avenir Next&quot;, 17, &quot;bold&quot;))
+
+        def step():
+            if not self.breathing:
+                return
+            phases = [&quot;Inhale&quot;, &quot;Hold&quot;, &quot;Exhale&quot;, &quot;Rest&quot;]
+            self.breath_phase = (self.breath_phase + 1) % len(phases)
+            canvas.itemconfigure(label, text=phases[self.breath_phase])
+            radius = 70 if phases[self.breath_phase] in [&quot;Inhale&quot;, &quot;Hold&quot;] else 55
+            canvas.coords(circle, 95 - radius, 95 - radius, 95 + radius, 95 + radius)
+            self.root.after(2200, step)
+
+        def start_stop():
+            self.breathing = not self.breathing
+            if self.breathing:
+                self.state[&quot;skills&quot;][&quot;breathing&quot;] += 1
+                save_state(self.state)
+                step()
+            else:
+                canvas.itemconfigure(label, text=&quot;Inhale&quot;)
+
+        self.button(frame, &quot;Start / Stop&quot;, start_stop).pack()
+
+    def exercise_grounding(self, parent, col):
+        frame = tk.Frame(parent, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        frame.grid(row=0, column=col, sticky=&quot;nsew&quot;, padx=8)
+        tk.Label(frame, text=&quot;5-4-3-2-1&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        prompt = tk.Label(frame, text=GROUNDING_PROMPTS[self.grounding_index], fg=TEXT, bg=BACKGROUND, wraplength=270, justify=&quot;left&quot;, padx=12, pady=18)
+        prompt.pack(fill=&quot;x&quot;, pady=18)
+
+        def next_prompt():
+            self.grounding_index = (self.grounding_index + 1) % len(GROUNDING_PROMPTS)
+            self.state[&quot;skills&quot;][&quot;grounding&quot;] += 1
+            save_state(self.state)
+            prompt.configure(text=GROUNDING_PROMPTS[self.grounding_index])
+
+        self.button(frame, &quot;Next&quot;, next_prompt, bg=OPTION_BUTTON, fg=NAVY).pack()
+
+    def exercise_triggers(self, parent, col):
+        frame = tk.Frame(parent, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        frame.grid(row=0, column=col, sticky=&quot;nsew&quot;, padx=8)
+        tk.Label(frame, text=&quot;Trigger map&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        entry = tk.Entry(frame, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+        entry.pack(fill=&quot;x&quot;, ipady=7, pady=(12, 8))
+
+        def add_trigger():
+            text = entry.get().strip()
+            if text:
+                self.state[&quot;triggers&quot;].insert(0, text)
+                self.state[&quot;triggers&quot;] = self.state[&quot;triggers&quot;][:24]
+                save_state(self.state)
+                self.show_shell(&quot;exercises&quot;)
+
+        self.button(frame, &quot;Add&quot;, add_trigger, bg=OPTION_BUTTON, fg=NAVY).pack(anchor=&quot;e&quot;)
+        for item in self.state[&quot;triggers&quot;][:10]:
+            tk.Label(frame, text=item, fg=NAVY, bg=OPTION_BUTTON, padx=10, pady=5).pack(anchor=&quot;w&quot;, pady=3)
+
+    def page_goals(self):
+        self.page_title(&quot;Future&quot;, &quot;Goals and planning&quot;)
+        body = tk.Frame(self.content, bg=BACKGROUND)
+        body.pack(fill=&quot;both&quot;, expand=True)
+        form = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        form.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True, padx=(0, 12))
+        listing = tk.Frame(body, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+        listing.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True)
+        fields = {}
+        for label in [&quot;Goal&quot;, &quot;Next step&quot;, &quot;Strength used&quot;]:
+            tk.Label(form, text=label, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+            field = tk.Entry(form, relief=&quot;flat&quot;, highlightbackground=LINE, highlightthickness=1)
+            field.pack(fill=&quot;x&quot;, ipady=7, pady=(4, 12))
+            fields[label] = field
+
+        def save_goal():
+            goal = fields[&quot;Goal&quot;].get().strip()
+            step = fields[&quot;Next step&quot;].get().strip()
+            strength = fields[&quot;Strength used&quot;].get().strip()
+            if not goal or not step:
+                messagebox.showwarning(APP_NAME, &quot;Add a goal and next step.&quot;)
+                return
+            self.state[&quot;goals&quot;].insert(0, {&quot;goal&quot;: goal, &quot;step&quot;: step, &quot;strength&quot;: strength, &quot;time&quot;: time.time()})
+            save_state(self.state)
+            self.show_shell(&quot;goals&quot;)
+
+        self.button(form, &quot;Save goal&quot;, save_goal).pack(anchor=&quot;e&quot;)
+        tk.Label(listing, text=&quot;Active goals&quot;, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        if not self.state[&quot;goals&quot;]:
+            tk.Label(listing, text=&quot;No goals yet.&quot;, fg=MUTED, bg=SOFT).pack(anchor=&quot;w&quot;, pady=8)
+        for index, goal in enumerate(self.state[&quot;goals&quot;]):
+            box = tk.Frame(listing, bg=BACKGROUND, padx=10, pady=10, highlightbackground=LINE, highlightthickness=1)
+            box.pack(fill=&quot;x&quot;, pady=6)
+            tk.Label(box, text=goal[&quot;goal&quot;], fg=NAVY, bg=BACKGROUND, font=(&quot;Google Sans&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+            tk.Label(box, text=goal[&quot;step&quot;], fg=TEXT, bg=BACKGROUND, wraplength=420, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;)
+            if goal.get(&quot;strength&quot;):
+                tk.Label(box, text=goal[&quot;strength&quot;], fg=MUTED, bg=BACKGROUND).pack(anchor=&quot;w&quot;)
+            row = tk.Frame(box, bg=BACKGROUND)
+            row.pack(anchor=&quot;e&quot;)
+            self.button(row, &quot;Complete&quot;, lambda index=index: self.complete_goal(index), bg=OPTION_BUTTON, fg=NAVY).pack(side=&quot;left&quot;, padx=4)
+            self.button(row, &quot;Remove&quot;, lambda index=index: self.remove_goal(index), bg=BACKGROUND, fg=NAVY).pack(side=&quot;left&quot;, padx=4)
+
+    def complete_goal(self, index):
+        if 0 &lt;= index &lt; len(self.state[&quot;goals&quot;]):
+            self.state[&quot;goals&quot;].pop(index)
+            self.state[&quot;completed_goals&quot;] += 1
+            save_state(self.state)
+        self.show_shell(&quot;goals&quot;)
+
+    def remove_goal(self, index):
+        if 0 &lt;= index &lt; len(self.state[&quot;goals&quot;]):
+            self.state[&quot;goals&quot;].pop(index)
+            save_state(self.state)
+        self.show_shell(&quot;goals&quot;)
+
+    def page_dashboard(self):
+        self.page_title(&quot;Progress&quot;, &quot;Your dashboard&quot;, &quot;Progress is cumulative here. Nothing is lost when a week is difficult.&quot;)
+        stats = [
+            (&quot;Mood check-ins&quot;, len(self.state[&quot;moods&quot;])),
+            (&quot;Journal entries&quot;, len(self.state[&quot;journal&quot;])),
+            (&quot;Goals achieved&quot;, self.state[&quot;completed_goals&quot;]),
+            (&quot;Exercises completed&quot;, self.state[&quot;skills&quot;][&quot;breathing&quot;] + self.state[&quot;skills&quot;][&quot;grounding&quot;]),
+            (&quot;Triggers mapped&quot;, len(self.state[&quot;triggers&quot;])),
+        ]
+        grid = tk.Frame(self.content, bg=BACKGROUND)
+        grid.pack(fill=&quot;x&quot;)
+        for index, (label, value) in enumerate(stats):
+            card = tk.Frame(grid, bg=SOFT, padx=18, pady=18, highlightbackground=LINE, highlightthickness=1)
+            card.grid(row=0, column=index, sticky=&quot;nsew&quot;, padx=6)
+            grid.columnconfigure(index, weight=1)
+            tk.Label(card, text=str(value), fg=TITLE, bg=SOFT, font=(&quot;Avenir Next&quot;, 30, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+            tk.Label(card, text=label, fg=NAVY, bg=SOFT, font=(&quot;Google Sans&quot;, 10, &quot;bold&quot;), wraplength=150).pack(anchor=&quot;w&quot;)
+
+    def page_privacy(self):
+        self.page_title(self.tr(&quot;settings&quot;), self.tr(&quot;privacy_title&quot;))
+        box = tk.Frame(self.content, bg=SOFT, padx=20, pady=20, highlightbackground=LINE, highlightthickness=1)
+        box.pack(fill=&quot;x&quot;)
+        self.language_selector(box, refresh=&quot;privacy&quot;).pack(anchor=&quot;w&quot;, pady=(0, 8))
+        tk.Label(box, text=self.tr(&quot;save_language&quot;), fg=MUTED, bg=SOFT, wraplength=820, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(0, 12))
+        tk.Label(box, text=&quot;Data stays on this computer in sobrad_data.json beside the Python app.&quot;, fg=TEXT, bg=SOFT, wraplength=820, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(0, 12))
+        anonymous = tk.BooleanVar(value=self.state.get(&quot;anonymous&quot;, False))
+        tk.Checkbutton(box, text=&quot;Anonymous mode&quot;, variable=anonymous, bg=SOFT, fg=NAVY, activebackground=SOFT).pack(anchor=&quot;w&quot;)
+
+        def save_privacy():
+            self.state[&quot;anonymous&quot;] = anonymous.get()
+            save_state(self.state)
+            messagebox.showinfo(APP_NAME, &quot;Saved.&quot;)
+
+        def delete_all():
+            if messagebox.askyesno(APP_NAME, &quot;Delete all local SÕBRAD data from this computer?&quot;):
+                self.state = default_state()
+                if DATA_FILE.exists():
+                    DATA_FILE.unlink()
+                self.show_login()
+
+        row = tk.Frame(box, bg=SOFT)
+        row.pack(anchor=&quot;w&quot;, pady=16)
+        self.button(row, &quot;Save privacy settings&quot;, save_privacy).pack(side=&quot;left&quot;, padx=(0, 8))
+        self.button(row, &quot;Delete all data&quot;, delete_all, bg=DANGER, fg=&quot;white&quot;).pack(side=&quot;left&quot;)
+
+
+def main():
+    root = tk.Tk()
+    SobradApp(root)
+    root.mainloop()
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+    </section>
+
+    <section class="file-section" id="tijdmanager-source">
+      <div class="file-head">
+        <h2>Tijdmanager</h2>
+        <span class="file-name">tijdmanager.py</span>
+      </div>
+      <p class="file-desc">A single-file Tkinter desktop app for ADHD-friendly time management — a Pomodoro-style focus timer, a day planner with draggable time blocks, a task list with priorities, study-session logging, mood check-ins, streaks/badges, weekly reports and a settings panel (language, dark mode, low-stimulation and high-contrast modes). Everything lives in this one file and saves locally to a JSON file beside it — no external services, no package structure.</p>
+      <pre><code># -*- coding: utf-8 -*-
+&quot;&quot;&quot;TIJDMANAGER - a gentle time management desktop app.
+
+Run with:
+    python tijdmanager.py
+
+The app stores local data in tijdmanager_data.json beside this file.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import json
+import math
+import textwrap
+import uuid
+from collections import Counter, defaultdict
+from datetime import date, datetime, timedelta
+from pathlib import Path
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+
+APP_DIR = Path(__file__).resolve().parent
+DATA_FILE = APP_DIR / &quot;tijdmanager_data.json&quot;
+LOGO_FILE = APP_DIR / &quot;assets&quot; / &quot;logo.png&quot;
+
+CYAN = &quot;#02B2E4&quot;
+CYAN_DARK = &quot;#008BB7&quot;
+LIME = &quot;#CED200&quot;
+LIME_SOFT = &quot;#F2F4A8&quot;
+PAPER = &quot;#FFFFFF&quot;
+WASH = &quot;#F5FAFB&quot;
+INK = &quot;#22252D&quot;
+MUTED = &quot;#68717C&quot;
+LINE = &quot;#DDE7EC&quot;
+CORAL = &quot;#FF6B6B&quot;
+VIOLET = &quot;#7158E2&quot;
+GREEN = &quot;#14A76C&quot;
+AMBER = &quot;#F2A900&quot;
+
+BLOCK_COLOURS = {
+    &quot;Study&quot;: CYAN,
+    &quot;Work&quot;: VIOLET,
+    &quot;Break&quot;: GREEN,
+    &quot;Exercise&quot;: CORAL,
+    &quot;Rest&quot;: LIME,
+}
+
+LANGUAGES = [
+    &quot;English (UK)&quot;,
+    &quot;Français&quot;,
+    &quot;Nederlands&quot;,
+    &quot;Eesti&quot;,
+    &quot;Deutsch&quot;,
+    &quot;Suomi&quot;,
+    &quot;Svenska&quot;,
+]
+
+
+def today_key() -&gt; str:
+    return date.today().isoformat()
+
+
+def day_key(days_from_today: int) -&gt; str:
+    return (date.today() + timedelta(days=days_from_today)).isoformat()
+
+
+def new_id() -&gt; str:
+    return uuid.uuid4().hex[:10]
+
+
+def parse_day(value: str) -&gt; date:
+    return datetime.strptime(value, &quot;%Y-%m-%d&quot;).date()
+
+
+def merge_defaults(defaults, loaded):
+    if isinstance(defaults, dict) and isinstance(loaded, dict):
+        merged = dict(defaults)
+        for key, value in loaded.items():
+            merged[key] = merge_defaults(defaults.get(key), value)
+        return merged
+    return loaded if loaded is not None else defaults
+
+
+def default_state() -&gt; dict:
+    return {
+        &quot;xp&quot;: 140,
+        &quot;settings&quot;: {
+            &quot;language&quot;: &quot;English (UK)&quot;,
+            &quot;dark_mode&quot;: False,
+            &quot;low_stimulation&quot;: False,
+            &quot;high_contrast&quot;: False,
+            &quot;reduce_animations&quot;: False,
+            &quot;sound&quot;: False,
+        },
+        &quot;timer&quot;: {
+            &quot;mode&quot;: &quot;25/5&quot;,
+            &quot;focus_minutes&quot;: 25,
+            &quot;break_minutes&quot;: 5,
+            &quot;phase&quot;: &quot;Focus&quot;,
+            &quot;seconds_left&quot;: 25 * 60,
+            &quot;total_seconds&quot;: 25 * 60,
+            &quot;running&quot;: False,
+            &quot;task&quot;: &quot;Study session&quot;,
+        },
+        &quot;tasks&quot;: [
+            {
+                &quot;id&quot;: new_id(),
+                &quot;title&quot;: &quot;Read one chapter&quot;,
+                &quot;priority&quot;: &quot;Important&quot;,
+                &quot;subject&quot;: &quot;Psychology&quot;,
+                &quot;done&quot;: False,
+                &quot;created&quot;: today_key(),
+            },
+            {
+                &quot;id&quot;: new_id(),
+                &quot;title&quot;: &quot;Prepare tomorrow&#x27;s bag&quot;,
+                &quot;priority&quot;: &quot;Optional&quot;,
+                &quot;subject&quot;: &quot;Routine&quot;,
+                &quot;done&quot;: False,
+                &quot;created&quot;: today_key(),
+            },
+            {
+                &quot;id&quot;: new_id(),
+                &quot;title&quot;: &quot;Email tutor about deadline&quot;,
+                &quot;priority&quot;: &quot;Urgent&quot;,
+                &quot;subject&quot;: &quot;Admin&quot;,
+                &quot;done&quot;: False,
+                &quot;created&quot;: today_key(),
+            },
+        ],
+        &quot;study_logs&quot;: [
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-6), &quot;minutes&quot;: 25, &quot;subject&quot;: &quot;Maths&quot;, &quot;target_start&quot;: &quot;10:00&quot;, &quot;target_end&quot;: &quot;10:30&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-5), &quot;minutes&quot;: 55, &quot;subject&quot;: &quot;Essay&quot;, &quot;target_start&quot;: &quot;15:00&quot;, &quot;target_end&quot;: &quot;16:00&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-4), &quot;minutes&quot;: 30, &quot;subject&quot;: &quot;Biology&quot;, &quot;target_start&quot;: &quot;09:30&quot;, &quot;target_end&quot;: &quot;10:00&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-2), &quot;minutes&quot;: 70, &quot;subject&quot;: &quot;Maths&quot;, &quot;target_start&quot;: &quot;11:00&quot;, &quot;target_end&quot;: &quot;12:10&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-1), &quot;minutes&quot;: 40, &quot;subject&quot;: &quot;Essay&quot;, &quot;target_start&quot;: &quot;17:00&quot;, &quot;target_end&quot;: &quot;17:45&quot;},
+        ],
+        &quot;checkins&quot;: {
+            day_key(-2): {&quot;mood&quot;: &quot;Good&quot;, &quot;energy&quot;: 7, &quot;stress&quot;: 4},
+            day_key(-1): {&quot;mood&quot;: &quot;Okay&quot;, &quot;energy&quot;: 5, &quot;stress&quot;: 6},
+        },
+        &quot;planner_blocks&quot;: [
+            {&quot;id&quot;: new_id(), &quot;date&quot;: today_key(), &quot;hour&quot;: 9, &quot;type&quot;: &quot;Study&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: today_key(), &quot;hour&quot;: 11, &quot;type&quot;: &quot;Break&quot;},
+            {&quot;id&quot;: new_id(), &quot;date&quot;: today_key(), &quot;hour&quot;: 14, &quot;type&quot;: &quot;Work&quot;},
+        ],
+        &quot;deadlines&quot;: [
+            {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Essay draft&quot;, &quot;date&quot;: day_key(1), &quot;type&quot;: &quot;Assignment&quot;},
+            {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Exam review&quot;, &quot;date&quot;: day_key(7), &quot;type&quot;: &quot;Exam&quot;},
+        ],
+        &quot;distractions&quot;: [
+            {&quot;id&quot;: new_id(), &quot;date&quot;: day_key(-1), &quot;type&quot;: &quot;YouTube&quot;, &quot;minutes&quot;: 18, &quot;note&quot;: &quot;Opened during break and stayed&quot;},
+        ],
+        &quot;routines&quot;: {
+            &quot;morning&quot;: [
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Wake up&quot;, &quot;done&quot;: False},
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Breakfast&quot;, &quot;done&quot;: False},
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Medication&quot;, &quot;done&quot;: False},
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Study&quot;, &quot;done&quot;: False},
+            ],
+            &quot;evening&quot;: [
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Review tasks&quot;, &quot;done&quot;: False},
+                {&quot;id&quot;: new_id(), &quot;title&quot;: &quot;Prepare tomorrow&quot;, &quot;done&quot;: False},
+            ],
+        },
+        &quot;journal&quot;: {},
+        &quot;reminders&quot;: [
+            {&quot;id&quot;: new_id(), &quot;time&quot;: &quot;09:00&quot;, &quot;text&quot;: &quot;You planned 30 minutes today. Want to begin?&quot;, &quot;fired_on&quot;: &quot;&quot;},
+        ],
+        &quot;partner&quot;: {&quot;name&quot;: &quot;&quot;, &quot;email&quot;: &quot;&quot;},
+        &quot;chat&quot;: [
+            {&quot;role&quot;: &quot;coach&quot;, &quot;text&quot;: &quot;Tell me what feels hard today, and I will suggest one smaller next move.&quot;},
+        ],
+        &quot;last_breakdown&quot;: [],
+    }
+
+
+class ScrollPage(ttk.Frame):
+    def __init__(self, master):
+        super().__init__(master)
+        self.canvas = tk.Canvas(self, bg=WASH, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient=&quot;vertical&quot;, command=self.canvas.yview)
+        self.inner = tk.Frame(self.canvas, bg=WASH)
+        self.window = self.canvas.create_window((0, 0), window=self.inner, anchor=&quot;nw&quot;)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.pack(side=&quot;left&quot;, fill=&quot;both&quot;, expand=True)
+        self.scrollbar.pack(side=&quot;right&quot;, fill=&quot;y&quot;)
+        self.inner.bind(&quot;&lt;Configure&gt;&quot;, self._resize_scrollregion)
+        self.canvas.bind(&quot;&lt;Configure&gt;&quot;, self._resize_window)
+
+    def _resize_scrollregion(self, _event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox(&quot;all&quot;))
+
+    def _resize_window(self, event):
+        self.canvas.itemconfigure(self.window, width=event.width)
+
+    def clear(self):
+        for child in self.inner.winfo_children():
+            child.destroy()
+
+
+class TijdmanagerApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title(&quot;TIJDMANAGER&quot;)
+        self.geometry(&quot;1160x780&quot;)
+        self.minsize(940, 640)
+        self.state_data = self.load_state()
+        self.logo_image = None
+        self.status_var = tk.StringVar(value=&quot;Would now be a good time to begin?&quot;)
+        self.mode_var = tk.StringVar(value=self.state_data[&quot;timer&quot;][&quot;mode&quot;])
+        self.task_var = tk.StringVar(value=self.state_data[&quot;timer&quot;][&quot;task&quot;])
+        self.energy_var = tk.IntVar(value=self.today_checkin().get(&quot;energy&quot;, 6))
+        self.stress_var = tk.IntVar(value=self.today_checkin().get(&quot;stress&quot;, 4))
+        self.mood_var = tk.StringVar(value=self.today_checkin().get(&quot;mood&quot;, &quot;Okay&quot;))
+        self.selected_block_var = tk.StringVar(value=&quot;Study&quot;)
+        self.hour_var = tk.IntVar(value=9)
+        self.language_var = tk.StringVar(value=self.state_data[&quot;settings&quot;].get(&quot;language&quot;, &quot;English (UK)&quot;))
+        self.setup_style()
+        self.build_layout()
+        self.refresh_all()
+        self.after(1000, self.tick_timer)
+        self.after(30000, self.check_reminders)
+        self.protocol(&quot;WM_DELETE_WINDOW&quot;, self.on_close)
+
+    def load_state(self) -&gt; dict:
+        defaults = default_state()
+        if not DATA_FILE.exists():
+            return defaults
+        try:
+            with DATA_FILE.open(&quot;r&quot;, encoding=&quot;utf-8&quot;) as handle:
+                loaded = json.load(handle)
+            return merge_defaults(defaults, loaded)
+        except (OSError, json.JSONDecodeError):
+            return defaults
+
+    def save_state(self):
+        DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with DATA_FILE.open(&quot;w&quot;, encoding=&quot;utf-8&quot;) as handle:
+            json.dump(self.state_data, handle, indent=2, ensure_ascii=False)
+
+    def setup_style(self):
+        self.configure(bg=WASH)
+        self.option_add(&quot;*Font&quot;, (&quot;Segoe UI&quot;, 10))
+        style = ttk.Style(self)
+        style.theme_use(&quot;clam&quot;)
+        style.configure(&quot;TNotebook&quot;, background=WASH, borderwidth=0)
+        style.configure(&quot;TNotebook.Tab&quot;, padding=(16, 9), font=(&quot;Segoe UI&quot;, 10, &quot;bold&quot;))
+        style.map(&quot;TNotebook.Tab&quot;, background=[(&quot;selected&quot;, PAPER)], foreground=[(&quot;selected&quot;, CYAN_DARK)])
+        style.configure(&quot;TButton&quot;, padding=(10, 7), font=(&quot;Segoe UI&quot;, 10, &quot;bold&quot;))
+        style.configure(&quot;Accent.TButton&quot;, background=CYAN, foreground=INK, bordercolor=CYAN)
+        style.configure(&quot;Soft.TButton&quot;, background=LIME_SOFT, foreground=INK, bordercolor=LIME)
+        style.configure(&quot;TCombobox&quot;, padding=6)
+
+    def build_layout(self):
+        header = tk.Frame(self, bg=PAPER, highlightbackground=LINE, highlightthickness=1, padx=14, pady=10)
+        header.pack(fill=&quot;x&quot;, padx=12, pady=(12, 8))
+
+        if LOGO_FILE.exists():
+            try:
+                original = tk.PhotoImage(file=str(LOGO_FILE))
+                self.logo_image = original.subsample(max(1, original.width() // 64), max(1, original.height() // 64))
+                tk.Label(header, image=self.logo_image, bg=PAPER).pack(side=&quot;left&quot;, padx=(0, 12))
+            except tk.TclError:
+                self.logo_image = None
+
+        title_box = tk.Frame(header, bg=PAPER)
+        title_box.pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True)
+        tk.Label(title_box, text=&quot;TIJDMANAGER&quot;, bg=PAPER, fg=INK, font=(&quot;Segoe UI Black&quot;, 20)).pack(anchor=&quot;w&quot;)
+        tk.Label(title_box, text=&quot;Gentle focus, real progress&quot;, bg=PAPER, fg=MUTED).pack(anchor=&quot;w&quot;)
+
+        ttk.Label(header, text=&quot;Language&quot;).pack(side=&quot;left&quot;, padx=(10, 4))
+        language = ttk.Combobox(header, textvariable=self.language_var, values=LANGUAGES, state=&quot;readonly&quot;, width=16)
+        language.pack(side=&quot;left&quot;)
+        language.bind(&quot;&lt;&lt;ComboboxSelected&gt;&gt;&quot;, lambda _event: self.update_language())
+
+        ttk.Button(header, text=&quot;Help me focus&quot;, style=&quot;Accent.TButton&quot;, command=self.emergency_focus).pack(side=&quot;left&quot;, padx=(10, 0))
+
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=&quot;both&quot;, expand=True, padx=12, pady=(0, 12))
+        self.pages = {}
+        for key, label in [
+            (&quot;today&quot;, &quot;Today&quot;),
+            (&quot;planner&quot;, &quot;Planner&quot;),
+            (&quot;analytics&quot;, &quot;Analytics&quot;),
+            (&quot;assistant&quot;, &quot;Assistant&quot;),
+            (&quot;routines&quot;, &quot;Routines&quot;),
+            (&quot;reports&quot;, &quot;Reports&quot;),
+            (&quot;settings&quot;, &quot;Settings&quot;),
+        ]:
+            page = ScrollPage(self.notebook)
+            self.pages[key] = page
+            self.notebook.add(page, text=label)
+
+    def panel(self, parent, title: str, subtitle: str = &quot;&quot;) -&gt; tk.Frame:
+        frame = tk.Frame(parent, bg=PAPER, highlightbackground=LINE, highlightthickness=1, padx=14, pady=12)
+        tk.Label(frame, text=subtitle, bg=PAPER, fg=MUTED, font=(&quot;Segoe UI&quot;, 9)).pack(anchor=&quot;w&quot;)
+        tk.Label(frame, text=title, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 18, &quot;bold&quot;), wraplength=420, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(0, 10))
+        return frame
+
+    def make_entry(self, parent, width=18, textvariable=None):
+        entry = ttk.Entry(parent, width=width, textvariable=textvariable)
+        return entry
+
+    def refresh_all(self):
+        self.build_today_page()
+        self.build_planner_page()
+        self.build_analytics_page()
+        self.build_assistant_page()
+        self.build_routines_page()
+        self.build_reports_page()
+        self.build_settings_page()
+        self.draw_timer()
+        self.save_state()
+
+    def build_today_page(self):
+        page = self.pages[&quot;today&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure((0, 1, 2), weight=1, uniform=&quot;today&quot;)
+
+        timer_panel = self.panel(body, &quot;Ready when you are&quot;, &quot;Focus Session Timer&quot;)
+        timer_panel.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        top = tk.Frame(timer_panel, bg=PAPER)
+        top.pack(fill=&quot;x&quot;)
+        ttk.Button(top, text=&quot;Continue session&quot;, style=&quot;Soft.TButton&quot;, command=self.continue_session).pack(side=&quot;right&quot;)
+        self.timer_canvas = tk.Canvas(timer_panel, width=260, height=260, bg=PAPER, highlightthickness=0)
+        self.timer_canvas.pack(pady=6)
+        ttk.Label(timer_panel, text=&quot;Current task&quot;).pack(anchor=&quot;w&quot;)
+        task_entry = ttk.Entry(timer_panel, textvariable=self.task_var)
+        task_entry.pack(fill=&quot;x&quot;, pady=(2, 8))
+        task_entry.bind(&quot;&lt;KeyRelease&gt;&quot;, lambda _event: self.update_timer_task())
+        mode_row = tk.Frame(timer_panel, bg=PAPER)
+        mode_row.pack(fill=&quot;x&quot;, pady=(0, 8))
+        mode_box = ttk.Combobox(mode_row, textvariable=self.mode_var, values=[&quot;25/5&quot;, &quot;50/10&quot;, &quot;Custom&quot;], state=&quot;readonly&quot;, width=10)
+        mode_box.pack(side=&quot;left&quot;, padx=(0, 8))
+        mode_box.bind(&quot;&lt;&lt;ComboboxSelected&gt;&gt;&quot;, lambda _event: self.change_timer_mode())
+        self.custom_focus = ttk.Spinbox(mode_row, from_=5, to=180, width=6)
+        self.custom_focus.set(self.state_data[&quot;timer&quot;][&quot;focus_minutes&quot;])
+        self.custom_focus.pack(side=&quot;left&quot;, padx=4)
+        self.custom_break = ttk.Spinbox(mode_row, from_=1, to=60, width=6)
+        self.custom_break.set(self.state_data[&quot;timer&quot;][&quot;break_minutes&quot;])
+        self.custom_break.pack(side=&quot;left&quot;, padx=4)
+        ttk.Button(mode_row, text=&quot;Apply&quot;, command=self.apply_custom_timer).pack(side=&quot;left&quot;, padx=4)
+        controls = tk.Frame(timer_panel, bg=PAPER)
+        controls.pack(fill=&quot;x&quot;, pady=6)
+        ttk.Button(controls, text=&quot;▶ Start&quot;, style=&quot;Accent.TButton&quot;, command=self.start_timer).pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;, padx=2)
+        ttk.Button(controls, text=&quot;Ⅱ Pause&quot;, style=&quot;Soft.TButton&quot;, command=self.pause_timer).pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;, padx=2)
+        ttk.Button(controls, text=&quot;↺ Reset&quot;, command=self.reset_timer).pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;, padx=2)
+        tk.Label(timer_panel, textvariable=self.status_var, bg=PAPER, fg=MUTED, wraplength=350, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(8, 0))
+
+        tasks_panel = self.panel(body, &quot;Today&quot;, &quot;Daily plan&quot;)
+        tasks_panel.grid(row=0, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        xp = self.state_data.get(&quot;xp&quot;, 0)
+        tk.Label(tasks_panel, text=f&quot;{xp} XP · Level {xp // 100 + 1} · {self.streak()} day streak&quot;, bg=LIME_SOFT, fg=INK, padx=10, pady=4).pack(anchor=&quot;e&quot;)
+        add_row = tk.Frame(tasks_panel, bg=PAPER)
+        add_row.pack(fill=&quot;x&quot;, pady=(6, 8))
+        self.task_title_entry = ttk.Entry(add_row, width=24)
+        self.task_title_entry.insert(0, &quot;&quot;)
+        self.task_title_entry.pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;, padx=(0, 4))
+        self.task_priority_var = tk.StringVar(value=&quot;Important&quot;)
+        ttk.Combobox(add_row, textvariable=self.task_priority_var, values=[&quot;Urgent&quot;, &quot;Important&quot;, &quot;Optional&quot;], state=&quot;readonly&quot;, width=11).pack(side=&quot;left&quot;, padx=4)
+        self.task_subject_entry = ttk.Entry(add_row, width=12)
+        self.task_subject_entry.pack(side=&quot;left&quot;, padx=4)
+        ttk.Button(add_row, text=&quot;+&quot;, style=&quot;Accent.TButton&quot;, command=self.add_task).pack(side=&quot;left&quot;)
+        self.task_list_frame = tk.Frame(tasks_panel, bg=PAPER)
+        self.task_list_frame.pack(fill=&quot;both&quot;, expand=True)
+        self.render_tasks()
+        self.build_study_log(tasks_panel)
+
+        mood_panel = self.panel(body, &quot;Check-in&quot;, &quot;Mood &amp; energy&quot;)
+        mood_panel.grid(row=0, column=2, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        moods = tk.Frame(mood_panel, bg=PAPER)
+        moods.pack(fill=&quot;x&quot;)
+        for mood in [&quot;😀 Great&quot;, &quot;🙂 Good&quot;, &quot;😐 Okay&quot;, &quot;😞 Difficult&quot;]:
+            clean = mood.split(&quot; &quot;, 1)[1]
+            ttk.Radiobutton(moods, text=mood, value=clean, variable=self.mood_var).pack(side=&quot;left&quot;, expand=True, padx=2)
+        self.scale_row(mood_panel, &quot;Energy&quot;, self.energy_var)
+        self.scale_row(mood_panel, &quot;Stress&quot;, self.stress_var)
+        ttk.Button(mood_panel, text=&quot;Save check-in&quot;, style=&quot;Accent.TButton&quot;, command=self.save_checkin).pack(fill=&quot;x&quot;, pady=8)
+        tk.Label(mood_panel, text=self.burnout_text(), bg=&quot;#EAF8FC&quot;, fg=INK, padx=10, pady=8, wraplength=320, justify=&quot;left&quot;).pack(fill=&quot;x&quot;)
+
+        insight_panel = self.panel(body, &quot;Weak point &amp; next step&quot;, &quot;AI analysis&quot;)
+        insight_panel.grid(row=1, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        tk.Label(insight_panel, text=self.insight_text(), bg=&quot;#EAF8FC&quot;, fg=INK, padx=10, pady=8, wraplength=340, justify=&quot;left&quot;).pack(fill=&quot;x&quot;)
+
+        reminder_panel = self.panel(body, &quot;Gentle prompts&quot;, &quot;Smart reminders&quot;)
+        reminder_panel.grid(row=1, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.build_reminders(reminder_panel)
+
+        metrics_panel = self.panel(body, &quot;Weekly progress&quot;, &quot;Quick metrics&quot;)
+        metrics_panel.grid(row=1, column=2, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        for label, value in [
+            (&quot;Weekly hours&quot;, f&quot;{self.total_minutes_since(7) / 60:.1f}h&quot;),
+            (&quot;Completion&quot;, f&quot;{self.completion_rate()}%&quot;),
+            (&quot;Focus score&quot;, str(self.focus_score())),
+        ]:
+            tk.Label(metrics_panel, text=f&quot;{label}: {value}&quot;, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 13, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=5)
+
+    def build_study_log(self, parent):
+        box = tk.Frame(parent, bg=PAPER)
+        box.pack(fill=&quot;x&quot;, pady=(12, 0))
+        tk.Label(box, text=&quot;Daily studying time&quot;, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 13, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        row = tk.Frame(box, bg=PAPER)
+        row.pack(fill=&quot;x&quot;, pady=5)
+        self.study_minutes_entry = ttk.Entry(row, width=9)
+        self.study_minutes_entry.pack(side=&quot;left&quot;, padx=(0, 4))
+        self.study_subject_entry = ttk.Entry(row, width=14)
+        self.study_subject_entry.pack(side=&quot;left&quot;, padx=4)
+        self.target_start_entry = ttk.Entry(row, width=8)
+        self.target_start_entry.insert(0, &quot;09:00&quot;)
+        self.target_start_entry.pack(side=&quot;left&quot;, padx=4)
+        self.target_end_entry = ttk.Entry(row, width=8)
+        self.target_end_entry.insert(0, &quot;10:00&quot;)
+        self.target_end_entry.pack(side=&quot;left&quot;, padx=4)
+        ttk.Button(row, text=&quot;Record&quot;, style=&quot;Soft.TButton&quot;, command=self.add_study_log).pack(side=&quot;left&quot;, padx=4)
+
+    def scale_row(self, parent, label, variable):
+        row = tk.Frame(parent, bg=PAPER)
+        row.pack(fill=&quot;x&quot;, pady=6)
+        tk.Label(row, text=label, bg=PAPER, fg=INK, width=8, anchor=&quot;w&quot;).pack(side=&quot;left&quot;)
+        tk.Scale(row, from_=1, to=10, orient=&quot;horizontal&quot;, variable=variable, bg=PAPER, highlightthickness=0, troughcolor=LINE, activebackground=CYAN).pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;)
+        tk.Label(row, textvariable=variable, bg=PAPER, fg=INK, width=3).pack(side=&quot;right&quot;)
+
+    def render_tasks(self):
+        for child in self.task_list_frame.winfo_children():
+            child.destroy()
+        if not self.state_data[&quot;tasks&quot;]:
+            tk.Label(self.task_list_frame, text=&quot;No tasks yet.&quot;, bg=PAPER, fg=MUTED).pack(anchor=&quot;w&quot;, pady=6)
+            return
+        for task in self.state_data[&quot;tasks&quot;][:10]:
+            row = tk.Frame(self.task_list_frame, bg=WASH, highlightbackground=LINE, highlightthickness=1, padx=8, pady=6)
+            row.pack(fill=&quot;x&quot;, pady=4)
+            var = tk.BooleanVar(value=task.get(&quot;done&quot;, False))
+            ttk.Checkbutton(row, variable=var, command=lambda item=task, value=var: self.toggle_task(item, value)).pack(side=&quot;left&quot;)
+            text = f&quot;{task[&#x27;title&#x27;]}  ·  {task[&#x27;priority&#x27;]}  ·  {task.get(&#x27;subject&#x27;, &#x27;General&#x27;)}&quot;
+            style = (&quot;Segoe UI&quot;, 10, &quot;overstrike&quot;) if task.get(&quot;done&quot;) else (&quot;Segoe UI&quot;, 10, &quot;bold&quot;)
+            tk.Label(row, text=text, bg=WASH, fg=INK, font=style, anchor=&quot;w&quot;, wraplength=430, justify=&quot;left&quot;).pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True)
+            ttk.Button(row, text=&quot;×&quot;, width=3, command=lambda item=task: self.remove_task(item)).pack(side=&quot;right&quot;)
+
+    def build_reminders(self, parent):
+        row = tk.Frame(parent, bg=PAPER)
+        row.pack(fill=&quot;x&quot;)
+        self.reminder_time_entry = ttk.Entry(row, width=8)
+        self.reminder_time_entry.insert(0, &quot;09:00&quot;)
+        self.reminder_time_entry.pack(side=&quot;left&quot;, padx=(0, 4))
+        self.reminder_text_entry = ttk.Entry(row)
+        self.reminder_text_entry.insert(0, &quot;Would now be a good time to start?&quot;)
+        self.reminder_text_entry.pack(side=&quot;left&quot;, expand=True, fill=&quot;x&quot;, padx=4)
+        ttk.Button(row, text=&quot;+&quot;, style=&quot;Soft.TButton&quot;, command=self.add_reminder).pack(side=&quot;left&quot;)
+        for reminder in self.state_data[&quot;reminders&quot;]:
+            tk.Label(parent, text=f&quot;{reminder[&#x27;time&#x27;]}  {reminder[&#x27;text&#x27;]}&quot;, bg=PAPER, fg=INK, anchor=&quot;w&quot;, wraplength=420, justify=&quot;left&quot;).pack(fill=&quot;x&quot;, pady=4)
+
+    def build_planner_page(self):
+        page = self.pages[&quot;planner&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=2)
+
+        controls = self.panel(body, &quot;Blocks&quot;, &quot;Time Blocking Planner&quot;)
+        controls.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        tk.Label(controls, text=&quot;Choose a block and hour, then add it to today.&quot;, bg=PAPER, fg=MUTED, wraplength=350, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;)
+        ttk.Combobox(controls, textvariable=self.selected_block_var, values=list(BLOCK_COLOURS), state=&quot;readonly&quot;).pack(fill=&quot;x&quot;, pady=6)
+        ttk.Spinbox(controls, from_=6, to=22, textvariable=self.hour_var).pack(fill=&quot;x&quot;, pady=6)
+        ttk.Button(controls, text=&quot;Add time block&quot;, style=&quot;Accent.TButton&quot;, command=self.add_time_block).pack(fill=&quot;x&quot;, pady=4)
+        tk.Label(controls, text=&quot;Daily studying target time&quot;, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 12, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(12, 2))
+        tk.Label(controls, text=self.target_time_summary(), bg=PAPER, fg=CYAN_DARK, font=(&quot;Segoe UI&quot;, 14, &quot;bold&quot;)).pack(anchor=&quot;w&quot;)
+        self.build_deadline_editor(controls)
+
+        timeline = self.panel(body, &quot;Today timeline&quot;, &quot;Click × to remove a block&quot;)
+        timeline.grid(row=0, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        for hour in range(6, 23):
+            row = tk.Frame(timeline, bg=WASH, highlightbackground=LINE, highlightthickness=1, padx=6, pady=5)
+            row.pack(fill=&quot;x&quot;, pady=2)
+            tk.Label(row, text=f&quot;{hour:02}:00&quot;, bg=WASH, fg=MUTED, width=7).pack(side=&quot;left&quot;)
+            blocks = [item for item in self.state_data[&quot;planner_blocks&quot;] if item[&quot;date&quot;] == today_key() and item[&quot;hour&quot;] == hour]
+            for block in blocks:
+                tk.Label(row, text=block[&quot;type&quot;], bg=BLOCK_COLOURS.get(block[&quot;type&quot;], LINE), fg=INK if block[&quot;type&quot;] in (&quot;Study&quot;, &quot;Rest&quot;) else &quot;white&quot;, padx=10, pady=4).pack(side=&quot;left&quot;, padx=3)
+                ttk.Button(row, text=&quot;×&quot;, width=3, command=lambda item=block: self.remove_block(item)).pack(side=&quot;left&quot;)
+
+        calendar = self.panel(body, &quot;Calendar&quot;, &quot;Study logs and deadlines&quot;)
+        calendar.grid(row=1, column=0, columnspan=2, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.build_calendar(calendar)
+
+    def build_deadline_editor(self, parent):
+        tk.Label(parent, text=&quot;Deadlines&quot;, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 12, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(16, 2))
+        self.deadline_title_entry = ttk.Entry(parent)
+        self.deadline_title_entry.pack(fill=&quot;x&quot;, pady=3)
+        row = tk.Frame(parent, bg=PAPER)
+        row.pack(fill=&quot;x&quot;)
+        self.deadline_date_entry = ttk.Entry(row, width=12)
+        self.deadline_date_entry.insert(0, day_key(7))
+        self.deadline_date_entry.pack(side=&quot;left&quot;, padx=(0, 4))
+        self.deadline_type_var = tk.StringVar(value=&quot;Assignment&quot;)
+        ttk.Combobox(row, textvariable=self.deadline_type_var, values=[&quot;Assignment&quot;, &quot;Exam&quot;, &quot;Work&quot;], state=&quot;readonly&quot;, width=12).pack(side=&quot;left&quot;, padx=4)
+        ttk.Button(row, text=&quot;Add&quot;, style=&quot;Soft.TButton&quot;, command=self.add_deadline).pack(side=&quot;left&quot;, padx=4)
+        for item in sorted(self.state_data[&quot;deadlines&quot;], key=lambda x: x[&quot;date&quot;]):
+            days = (parse_day(item[&quot;date&quot;]) - date.today()).days
+            text = f&quot;{item[&#x27;title&#x27;]} · {item[&#x27;type&#x27;]} · {self.days_label(days)} · {self.schedule_suggestion(days)}&quot;
+            tk.Label(parent, text=text, bg=PAPER, fg=INK, wraplength=350, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=3)
+
+    def build_calendar(self, parent):
+        now = date.today().replace(day=1)
+        header = now.strftime(&quot;%B %Y&quot;)
+        tk.Label(parent, text=header, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 13, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(0, 6))
+        grid = tk.Frame(parent, bg=PAPER)
+        grid.pack(fill=&quot;x&quot;)
+        for index, name in enumerate([&quot;Mon&quot;, &quot;Tue&quot;, &quot;Wed&quot;, &quot;Thu&quot;, &quot;Fri&quot;, &quot;Sat&quot;, &quot;Sun&quot;]):
+            tk.Label(grid, text=name, bg=LIME_SOFT, fg=INK, width=15, padx=4, pady=4).grid(row=0, column=index, sticky=&quot;nsew&quot;, padx=1, pady=1)
+            grid.columnconfigure(index, weight=1)
+        first_weekday = now.weekday()
+        days = (date(now.year + (now.month // 12), (now.month % 12) + 1, 1) - timedelta(days=1)).day
+        for day in range(1, days + 1):
+            key = date(now.year, now.month, day).isoformat()
+            row = (day + first_weekday - 1) // 7 + 1
+            col = (day + first_weekday - 1) % 7
+            minutes = self.total_minutes_for_date(key)
+            deadline = next((item for item in self.state_data[&quot;deadlines&quot;] if item[&quot;date&quot;] == key), None)
+            label = f&quot;{day}&quot;
+            if minutes:
+                label += f&quot;\n{minutes}m&quot;
+            if deadline:
+                label += f&quot;\n{deadline[&#x27;title&#x27;][:12]}&quot;
+            bg = &quot;#EAF8FC&quot; if key == today_key() else WASH
+            tk.Label(grid, text=label, bg=bg, fg=INK, width=15, height=4, justify=&quot;left&quot;, anchor=&quot;nw&quot;, padx=4, pady=4, highlightbackground=LINE, highlightthickness=1).grid(row=row, column=col, sticky=&quot;nsew&quot;, padx=1, pady=1)
+
+    def build_analytics_page(self):
+        page = self.pages[&quot;analytics&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure((0, 1), weight=1, uniform=&quot;analytics&quot;)
+
+        daily = self.panel(body, &quot;Daily hours&quot;, &quot;Study Analytics Dashboard&quot;)
+        daily.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        canvas = tk.Canvas(daily, width=500, height=230, bg=PAPER, highlightthickness=0)
+        canvas.pack(fill=&quot;x&quot;)
+        self.draw_bar_chart(canvas)
+
+        subjects = self.panel(body, &quot;Subject breakdown&quot;, &quot;Pie chart&quot;)
+        subjects.grid(row=0, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        pie = tk.Canvas(subjects, width=500, height=230, bg=PAPER, highlightthickness=0)
+        pie.pack(fill=&quot;x&quot;)
+        self.draw_pie_chart(pie)
+
+        heat = self.panel(body, &quot;Heatmap&quot;, &quot;Last 35 days&quot;)
+        heat.grid(row=1, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.draw_heatmap(heat)
+
+        log = self.panel(body, &quot;Study log&quot;, &quot;Daily studying time column&quot;)
+        log.grid(row=1, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        for entry in self.state_data[&quot;study_logs&quot;][:18]:
+            text = f&quot;{entry[&#x27;date&#x27;]} · {entry[&#x27;minutes&#x27;]} min · {entry.get(&#x27;target_start&#x27;, &#x27;--&#x27;)}-{entry.get(&#x27;target_end&#x27;, &#x27;--&#x27;)} · {entry[&#x27;subject&#x27;]}&quot;
+            tk.Label(log, text=text, bg=PAPER, fg=INK, anchor=&quot;w&quot;).pack(fill=&quot;x&quot;, pady=2)
+
+        badges = self.panel(body, &quot;Achievements&quot;, &quot;Reward &amp; Gamification System&quot;)
+        badges.grid(row=2, column=0, columnspan=2, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.build_badges(badges)
+
+    def draw_bar_chart(self, canvas):
+        days = list(reversed(self.daily_totals(14)))
+        max_minutes = max([60] + [item[&quot;minutes&quot;] for item in days])
+        width, height = 500, 210
+        bar_space = width / len(days)
+        for index, item in enumerate(days):
+            bar_height = max(5, item[&quot;minutes&quot;] / max_minutes * 170)
+            x1 = index * bar_space + 10
+            y1 = height - bar_height - 20
+            x2 = x1 + bar_space - 8
+            y2 = height - 20
+            canvas.create_rectangle(x1, y1, x2, y2, fill=CYAN, outline=&quot;&quot;)
+            canvas.create_text((x1 + x2) / 2, y1 - 10, text=f&quot;{item[&#x27;minutes&#x27;] // 60}h&quot;, fill=MUTED, font=(&quot;Segoe UI&quot;, 8))
+        canvas.create_line(8, height - 20, width - 8, height - 20, fill=LINE)
+
+    def draw_pie_chart(self, canvas):
+        totals = defaultdict(int)
+        for entry in self.state_data[&quot;study_logs&quot;]:
+            totals[entry.get(&quot;subject&quot;, &quot;Study&quot;)] += int(entry[&quot;minutes&quot;])
+        if not totals:
+            canvas.create_text(250, 100, text=&quot;No study data yet&quot;, fill=MUTED)
+            return
+        colours = [CYAN, LIME, VIOLET, CORAL, GREEN, AMBER]
+        total = sum(totals.values())
+        start = 0
+        for index, (subject, minutes) in enumerate(sorted(totals.items(), key=lambda x: x[1], reverse=True)):
+            extent = minutes / total * 360
+            canvas.create_arc(30, 20, 210, 200, start=start, extent=extent, fill=colours[index % len(colours)], outline=PAPER)
+            canvas.create_rectangle(250, 32 + index * 26, 266, 48 + index * 26, fill=colours[index % len(colours)], outline=&quot;&quot;)
+            canvas.create_text(276, 40 + index * 26, text=f&quot;{subject}: {minutes}m&quot;, anchor=&quot;w&quot;, fill=INK, font=(&quot;Segoe UI&quot;, 10))
+            start += extent
+
+    def draw_heatmap(self, parent):
+        frame = tk.Frame(parent, bg=PAPER)
+        frame.pack(anchor=&quot;w&quot;)
+        for index, item in enumerate(reversed(self.daily_totals(35))):
+            level = 0
+            if item[&quot;minutes&quot;] &gt;= 120:
+                level = 4
+            elif item[&quot;minutes&quot;] &gt;= 60:
+                level = 3
+            elif item[&quot;minutes&quot;] &gt;= 25:
+                level = 2
+            elif item[&quot;minutes&quot;] &gt; 0:
+                level = 1
+            colours = [LINE, &quot;#BFEAF5&quot;, &quot;#70D4EC&quot;, LIME_SOFT, LIME]
+            tk.Label(frame, text=parse_day(item[&quot;date&quot;]).day, bg=colours[level], fg=INK, width=5, height=2).grid(row=index // 7, column=index % 7, padx=3, pady=3)
+
+    def build_badges(self, parent):
+        total_hours = sum(int(item[&quot;minutes&quot;]) for item in self.state_data[&quot;study_logs&quot;]) / 60
+        badges = [
+            (&quot;First Study Session&quot;, bool(self.state_data[&quot;study_logs&quot;])),
+            (&quot;7-Day Streak&quot;, self.streak() &gt;= 7),
+            (&quot;100 Hours Studied&quot;, total_hours &gt;= 100),
+            (&quot;Journal Keeper&quot;, len(self.state_data[&quot;journal&quot;]) &gt;= 3),
+            (&quot;Focus Saver&quot;, self.focus_score() &gt;= 70),
+        ]
+        row = tk.Frame(parent, bg=PAPER)
+        row.pack(fill=&quot;x&quot;)
+        for label, unlocked in badges:
+            bg = LIME_SOFT if unlocked else WASH
+            mark = &quot;✓&quot; if unlocked else &quot;○&quot;
+            tk.Label(row, text=f&quot;{mark} {label}&quot;, bg=bg, fg=INK, padx=12, pady=8, highlightbackground=LINE, highlightthickness=1).pack(side=&quot;left&quot;, padx=4, pady=4)
+
+    def build_assistant_page(self):
+        page = self.pages[&quot;assistant&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure((0, 1), weight=1, uniform=&quot;assistant&quot;)
+
+        breakdown = self.panel(body, &quot;Break a task down&quot;, &quot;Executive Function Assistant&quot;)
+        breakdown.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.breakdown_entry = ttk.Entry(breakdown)
+        self.breakdown_entry.insert(0, &quot;Write essay&quot;)
+        self.breakdown_entry.pack(fill=&quot;x&quot;, pady=4)
+        ttk.Button(breakdown, text=&quot;Break into steps&quot;, style=&quot;Accent.TButton&quot;, command=self.break_task_down).pack(fill=&quot;x&quot;, pady=4)
+        self.steps_frame = tk.Frame(breakdown, bg=PAPER)
+        self.steps_frame.pack(fill=&quot;x&quot;, pady=8)
+        self.render_steps()
+        ttk.Button(breakdown, text=&quot;Add steps to to-do list&quot;, style=&quot;Soft.TButton&quot;, command=self.add_steps_to_tasks).pack(fill=&quot;x&quot;)
+
+        goals = self.panel(body, &quot;Minimum, target, stretch&quot;, &quot;Adaptive Goal Setting&quot;)
+        goals.grid(row=0, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        row = tk.Frame(goals, bg=PAPER)
+        row.pack(fill=&quot;x&quot;)
+        self.goal_minutes_entry = ttk.Entry(row, width=10)
+        self.goal_minutes_entry.insert(0, &quot;240&quot;)
+        self.goal_minutes_entry.pack(side=&quot;left&quot;, padx=(0, 6))
+        ttk.Button(row, text=&quot;Suggest goals&quot;, style=&quot;Soft.TButton&quot;, command=self.suggest_goals).pack(side=&quot;left&quot;)
+        self.goal_text = tk.Text(goals, height=8, wrap=&quot;word&quot;, bg=&quot;#EAF8FC&quot;, fg=INK, relief=&quot;flat&quot;)
+        self.goal_text.pack(fill=&quot;x&quot;, pady=8)
+        self.suggest_goals()
+
+        chat = self.panel(body, &quot;Coach&quot;, &quot;Study prowess chatbot&quot;)
+        chat.grid(row=1, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.chat_text = tk.Text(chat, height=12, wrap=&quot;word&quot;, bg=WASH, relief=&quot;flat&quot;)
+        self.chat_text.pack(fill=&quot;both&quot;, expand=True)
+        self.render_chat()
+        row = tk.Frame(chat, bg=PAPER)
+        row.pack(fill=&quot;x&quot;, pady=(6, 0))
+        self.chat_entry = ttk.Entry(row)
+        self.chat_entry.pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True, padx=(0, 4))
+        ttk.Button(row, text=&quot;Send&quot;, style=&quot;Accent.TButton&quot;, command=self.send_chat).pack(side=&quot;left&quot;)
+
+        distractions = self.panel(body, &quot;Distractions&quot;, &quot;Distraction Tracker&quot;)
+        distractions.grid(row=1, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.distraction_type_var = tk.StringVar(value=&quot;Social media&quot;)
+        ttk.Combobox(distractions, textvariable=self.distraction_type_var, values=[&quot;Social media&quot;, &quot;Gaming&quot;, &quot;YouTube&quot;, &quot;Daydreaming&quot;, &quot;Other&quot;], state=&quot;readonly&quot;).pack(fill=&quot;x&quot;, pady=3)
+        self.distraction_minutes_entry = ttk.Entry(distractions)
+        self.distraction_minutes_entry.pack(fill=&quot;x&quot;, pady=3)
+        self.distraction_note_entry = ttk.Entry(distractions)
+        self.distraction_note_entry.pack(fill=&quot;x&quot;, pady=3)
+        ttk.Button(distractions, text=&quot;Record distraction&quot;, style=&quot;Accent.TButton&quot;, command=self.add_distraction).pack(fill=&quot;x&quot;, pady=4)
+        for item in self.state_data[&quot;distractions&quot;][:8]:
+            tk.Label(distractions, text=f&quot;{item[&#x27;date&#x27;]} · {item[&#x27;type&#x27;]} · {item[&#x27;minutes&#x27;]}m · {item.get(&#x27;note&#x27;, &#x27;&#x27;)}&quot;, bg=PAPER, fg=INK, wraplength=430, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=2)
+
+    def render_steps(self):
+        if not hasattr(self, &quot;steps_frame&quot;):
+            return
+        for child in self.steps_frame.winfo_children():
+            child.destroy()
+        for index, step in enumerate(self.state_data.get(&quot;last_breakdown&quot;, []), start=1):
+            tk.Label(self.steps_frame, text=f&quot;{index}. {step}&quot;, bg=PAPER, fg=INK, anchor=&quot;w&quot;, wraplength=430, justify=&quot;left&quot;).pack(fill=&quot;x&quot;, pady=2)
+
+    def build_routines_page(self):
+        page = self.pages[&quot;routines&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure((0, 1), weight=1, uniform=&quot;routines&quot;)
+
+        self.build_routine_panel(body, &quot;Morning routine&quot;, &quot;morning&quot;, 0)
+        self.build_routine_panel(body, &quot;Evening routine&quot;, &quot;evening&quot;, 1)
+
+        journal = self.panel(body, &quot;End of day&quot;, &quot;Reflection Journal&quot;)
+        journal.grid(row=1, column=0, columnspan=2, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        entry = self.state_data[&quot;journal&quot;].get(today_key(), {})
+        self.journal_well = self.text_field(journal, &quot;What went well?&quot;, entry.get(&quot;well&quot;, &quot;&quot;))
+        self.journal_difficult = self.text_field(journal, &quot;What was difficult?&quot;, entry.get(&quot;difficult&quot;, &quot;&quot;))
+        self.journal_tomorrow = self.text_field(journal, &quot;What will I do tomorrow?&quot;, entry.get(&quot;tomorrow&quot;, &quot;&quot;))
+        ttk.Button(journal, text=&quot;Save reflection&quot;, style=&quot;Accent.TButton&quot;, command=self.save_journal).pack(fill=&quot;x&quot;, pady=8)
+
+    def build_routine_panel(self, parent, title, key, column):
+        panel = self.panel(parent, title, &quot;Routine Builder&quot;)
+        panel.grid(row=0, column=column, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        row = tk.Frame(panel, bg=PAPER)
+        row.pack(fill=&quot;x&quot;, pady=4)
+        entry = ttk.Entry(row)
+        entry.pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True, padx=(0, 4))
+        ttk.Button(row, text=&quot;+&quot;, style=&quot;Accent.TButton&quot;, command=lambda: self.add_routine_item(key, entry)).pack(side=&quot;left&quot;)
+        for item in self.state_data[&quot;routines&quot;][key]:
+            item_row = tk.Frame(panel, bg=WASH, highlightbackground=LINE, highlightthickness=1, padx=8, pady=5)
+            item_row.pack(fill=&quot;x&quot;, pady=3)
+            var = tk.BooleanVar(value=item.get(&quot;done&quot;, False))
+            ttk.Checkbutton(item_row, variable=var, command=lambda routine=key, routine_item=item, value=var: self.toggle_routine(routine, routine_item, value)).pack(side=&quot;left&quot;)
+            tk.Label(item_row, text=item[&quot;title&quot;], bg=WASH, fg=INK, anchor=&quot;w&quot;).pack(side=&quot;left&quot;, fill=&quot;x&quot;, expand=True)
+            ttk.Button(item_row, text=&quot;×&quot;, width=3, command=lambda routine=key, routine_item=item: self.remove_routine(routine, routine_item)).pack(side=&quot;right&quot;)
+
+    def text_field(self, parent, label, value):
+        tk.Label(parent, text=label, bg=PAPER, fg=INK, font=(&quot;Segoe UI&quot;, 11, &quot;bold&quot;)).pack(anchor=&quot;w&quot;, pady=(8, 2))
+        text = tk.Text(parent, height=4, wrap=&quot;word&quot;, bg=WASH, fg=INK, relief=&quot;flat&quot;, padx=8, pady=6)
+        text.insert(&quot;1.0&quot;, value)
+        text.pack(fill=&quot;x&quot;)
+        return text
+
+    def build_reports_page(self):
+        page = self.pages[&quot;reports&quot;]
+        page.clear()
+        body = page.inner
+        body.columnconfigure((0, 1), weight=1, uniform=&quot;reports&quot;)
+
+        review = self.panel(body, &quot;This week&quot;, &quot;AI Weekly Review&quot;)
+        review.grid(row=0, column=0, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.weekly_text = tk.Text(review, height=14, wrap=&quot;word&quot;, bg=&quot;#EAF8FC&quot;, fg=INK, relief=&quot;flat&quot;, padx=10, pady=8)
+        self.weekly_text.pack(fill=&quot;both&quot;, expand=True)
+        self.render_weekly_review()
+        ttk.Button(review, text=&quot;Refresh&quot;, style=&quot;Soft.TButton&quot;, command=self.render_weekly_review).pack(fill=&quot;x&quot;, pady=6)
+
+        partner = self.panel(body, &quot;Progress sharing&quot;, &quot;Accountability Partner Mode&quot;)
+        partner.grid(row=0, column=1, sticky=&quot;nsew&quot;, padx=8, pady=8)
+        self.partner_name_entry = ttk.Entry(partner)
+        self.partner_name_entry.insert(0, self.state_data[&quot;partner&quot;].get(&quot;name&quot;, &quot;&quot;))
+        self.partner_name_entry.pack(fill=&quot;x&quot;, pady=4)
+        self.partner_email_entry = ttk.Entry(partner)
+        self.partner_email_entry.insert(0, self.state_data[&quot;partner&quot;].get(&quot;email&quot;, &quot;&quot;))
+        self.partner_email_entry.pack(fill=&quot;x&quot;, pady=4)
+        ttk.Button(partner, text=&quot;Save partner&quot;, style=&quot;Accent.TButton&quot;, command=self.save_partner).pack(fill=&quot;x&quot;, pady=4)
+        ttk.Button(partner, text=&quot;Copy weekly report&quot;, style=&quot;Soft.TButton&quot;, command=self.copy_weekly_report).pack(fill=&quot;x&quot;, pady=4)
+        ttk.Button(partner, text=&quot;Export PDF report&quot;, style=&quot;Accent.TButton&quot;, command=self.export_pdf_report).pack(fill=&quot;x&quot;, pady=4)
+
+    def build_settings_page(self):
+        page = self.pages[&quot;settings&quot;]
+        page.clear()
+        body = page.inner
+        panel = self.panel(body, &quot;Sensory settings&quot;, &quot;Especially helpful for low-overload work&quot;)
+        panel.pack(fill=&quot;x&quot;, padx=8, pady=8)
+        settings = self.state_data[&quot;settings&quot;]
+        self.setting_vars = {}
+        for key, label in [
+            (&quot;reduce_animations&quot;, &quot;Reduce animations&quot;),
+            (&quot;dark_mode&quot;, &quot;Dark mode&quot;),
+            (&quot;low_stimulation&quot;, &quot;Low stimulation mode&quot;),
+            (&quot;high_contrast&quot;, &quot;High contrast mode&quot;),
+            (&quot;sound&quot;, &quot;Sound on/off&quot;),
+        ]:
+            var = tk.BooleanVar(value=settings.get(key, False))
+            self.setting_vars[key] = var
+            ttk.Checkbutton(panel, text=label, variable=var, command=self.save_settings).pack(anchor=&quot;w&quot;, pady=5)
+        tk.Label(panel, text=&quot;This Python version keeps the interface readable by default. The logo colours are used for emphasis, and sound is optional.&quot;, bg=PAPER, fg=MUTED, wraplength=700, justify=&quot;left&quot;).pack(anchor=&quot;w&quot;, pady=(12, 0))
+
+    def draw_timer(self):
+        if not hasattr(self, &quot;timer_canvas&quot;):
+            return
+        timer = self.state_data[&quot;timer&quot;]
+        canvas = self.timer_canvas
+        canvas.delete(&quot;all&quot;)
+        size = 230
+        x = y = 15
+        seconds_left = max(0, int(timer[&quot;seconds_left&quot;]))
+        total = max(1, int(timer[&quot;total_seconds&quot;]))
+        progress = 1 - seconds_left / total
+        canvas.create_oval(x, y, x + size, y + size, outline=LINE, width=22)
+        canvas.create_arc(x, y, x + size, y + size, start=90, extent=-360 * progress, style=&quot;arc&quot;, outline=CYAN, width=22)
+        canvas.create_arc(x, y, x + size, y + size, start=90 - 360 * progress, extent=-12, style=&quot;arc&quot;, outline=LIME, width=22)
+        minutes = seconds_left // 60
+        seconds = seconds_left % 60
+        canvas.create_text(130, 118, text=f&quot;{minutes:02}:{seconds:02}&quot;, fill=INK, font=(&quot;Segoe UI Black&quot;, 34))
+        canvas.create_text(130, 157, text=timer[&quot;phase&quot;], fill=MUTED, font=(&quot;Segoe UI&quot;, 11))
+
+    def start_timer(self):
+        self.apply_custom_timer(silent=True)
+        self.state_data[&quot;timer&quot;][&quot;running&quot;] = True
+        self.status_var.set(&quot;One tiny step is enough to start.&quot;)
+        self.save_state()
+
+    def pause_timer(self):
+        self.state_data[&quot;timer&quot;][&quot;running&quot;] = False
+        self.status_var.set(&quot;Paused. Nothing is lost.&quot;)
+        self.save_state()
+
+    def reset_timer(self):
+        timer = self.state_data[&quot;timer&quot;]
+        timer[&quot;running&quot;] = False
+        timer[&quot;phase&quot;] = &quot;Focus&quot;
+        timer[&quot;seconds_left&quot;] = int(timer[&quot;focus_minutes&quot;]) * 60
+        timer[&quot;total_seconds&quot;] = timer[&quot;seconds_left&quot;]
+        self.status_var.set(&quot;Would now be a good time to begin?&quot;)
+        self.draw_timer()
+        self.save_state()
+
+    def continue_session(self):
+        timer = self.state_data[&quot;timer&quot;]
+        timer[&quot;phase&quot;] = &quot;Focus&quot;
+        timer[&quot;seconds_left&quot;] = int(timer[&quot;focus_minutes&quot;]) * 60
+        timer[&quot;total_seconds&quot;] = timer[&quot;seconds_left&quot;]
+        timer[&quot;running&quot;] = True
+        self.add_xp(5)
+        self.status_var.set(&quot;Continuing gently. You only need the next minute.&quot;)
+        self.save_state()
+
+    def change_timer_mode(self):
+        mode = self.mode_var.get()
+        timer = self.state_data[&quot;timer&quot;]
+        timer[&quot;mode&quot;] = mode
+        if mode == &quot;25/5&quot;:
+            timer[&quot;focus_minutes&quot;], timer[&quot;break_minutes&quot;] = 25, 5
+        elif mode == &quot;50/10&quot;:
+            timer[&quot;focus_minutes&quot;], timer[&quot;break_minutes&quot;] = 50, 10
+        else:
+            timer[&quot;focus_minutes&quot;] = int(self.custom_focus.get())
+            timer[&quot;break_minutes&quot;] = int(self.custom_break.get())
+        self.reset_timer()
+
+    def apply_custom_timer(self, silent=False):
+        timer = self.state_data[&quot;timer&quot;]
+        if self.mode_var.get() == &quot;Custom&quot;:
+            timer[&quot;mode&quot;] = &quot;Custom&quot;
+            timer[&quot;focus_minutes&quot;] = max(5, min(180, int(self.custom_focus.get())))
+            timer[&quot;break_minutes&quot;] = max(1, min(60, int(self.custom_break.get())))
+            if not timer[&quot;running&quot;]:
+                timer[&quot;seconds_left&quot;] = timer[&quot;focus_minutes&quot;] * 60
+                timer[&quot;total_seconds&quot;] = timer[&quot;seconds_left&quot;]
+        if not silent:
+            self.status_var.set(&quot;Custom timer applied.&quot;)
+        self.draw_timer()
+        self.save_state()
+
+    def update_timer_task(self):
+        self.state_data[&quot;timer&quot;][&quot;task&quot;] = self.task_var.get() or &quot;Focus session&quot;
+        self.save_state()
+
+    def tick_timer(self):
+        timer = self.state_data[&quot;timer&quot;]
+        if timer.get(&quot;running&quot;):
+            timer[&quot;seconds_left&quot;] -= 1
+            if timer[&quot;seconds_left&quot;] &lt;= 0:
+                self.complete_timer_phase()
+            self.draw_timer()
+            self.save_state()
+        self.after(1000, self.tick_timer)
+
+    def complete_timer_phase(self):
+        timer = self.state_data[&quot;timer&quot;]
+        timer[&quot;running&quot;] = False
+        if timer[&quot;phase&quot;] == &quot;Focus&quot;:
+            self.add_study_minutes(timer[&quot;focus_minutes&quot;], &quot;Focus&quot;)
+            self.add_xp(timer[&quot;focus_minutes&quot;])
+            timer[&quot;phase&quot;] = &quot;Break&quot;
+            timer[&quot;seconds_left&quot;] = timer[&quot;break_minutes&quot;] * 60
+            timer[&quot;total_seconds&quot;] = timer[&quot;seconds_left&quot;]
+            self.notify(&quot;Focus session complete. Take the break you planned.&quot;)
+        else:
+            timer[&quot;phase&quot;] = &quot;Focus&quot;
+            timer[&quot;seconds_left&quot;] = timer[&quot;focus_minutes&quot;] * 60
+            timer[&quot;total_seconds&quot;] = timer[&quot;seconds_left&quot;]
+            self.notify(&quot;Break complete. Would now be a good time to continue?&quot;)
+        self.refresh_all()
+
+    def emergency_focus(self):
+        self.notebook.select(self.pages[&quot;today&quot;])
+        self.start_timer()
+        messagebox.showinfo(&quot;Emergency Focus&quot;, f&quot;Only this task matters now:\n\n{self.task_var.get()}\n\nThe timer has started.&quot;)
+
+    def add_task(self):
+        title = self.task_title_entry.get().strip()
+        if not title:
+            return
+        self.state_data[&quot;tasks&quot;].insert(0, {
+            &quot;id&quot;: new_id(),
+            &quot;title&quot;: title,
+            &quot;priority&quot;: self.task_priority_var.get(),
+            &quot;subject&quot;: self.task_subject_entry.get().strip() or &quot;General&quot;,
+            &quot;done&quot;: False,
+            &quot;created&quot;: today_key(),
+        })
+        self.add_xp(2)
+        self.refresh_all()
+
+    def toggle_task(self, task, var):
+        task[&quot;done&quot;] = bool(var.get())
+        if task[&quot;done&quot;]:
+            self.add_xp(8)
+        self.refresh_all()
+
+    def remove_task(self, task):
+        self.state_data[&quot;tasks&quot;] = [item for item in self.state_data[&quot;tasks&quot;] if item[&quot;id&quot;] != task[&quot;id&quot;]]
+        self.refresh_all()
+
+    def add_study_log(self):
+        try:
+            minutes = int(self.study_minutes_entry.get())
+        except ValueError:
+            messagebox.showwarning(&quot;Study time&quot;, &quot;Please enter minutes as a number.&quot;)
+            return
+        self.add_study_minutes(minutes, self.study_subject_entry.get().strip() or &quot;Study&quot;, self.target_start_entry.get().strip(), self.target_end_entry.get().strip())
+        self.add_xp(max(1, minutes // 2))
+        self.refresh_all()
+
+    def add_study_minutes(self, minutes, subject, target_start=&quot;&quot;, target_end=&quot;&quot;):
+        self.state_data[&quot;study_logs&quot;].insert(0, {
+            &quot;id&quot;: new_id(),
+            &quot;date&quot;: today_key(),
+            &quot;minutes&quot;: int(minutes),
+            &quot;subject&quot;: subject,
+            &quot;target_start&quot;: target_start,
+            &quot;target_end&quot;: target_end,
+        })
+
+    def save_checkin(self):
+        self.state_data[&quot;checkins&quot;][today_key()] = {
+            &quot;mood&quot;: self.mood_var.get(),
+            &quot;energy&quot;: self.energy_var.get(),
+            &quot;stress&quot;: self.stress_var.get(),
+        }
+        self.add_xp(5)
+        self.notify(&quot;Check-in saved. Thank you for noticing where you are today.&quot;)
+        self.refresh_all()
+
+    def today_checkin(self):
+        return self.state_data.get(&quot;checkins&quot;, {}).get(today_key(), {})
+
+    def add_reminder(self):
+        time_text = self.reminder_time_entry.get().strip()
+        text = self.reminder_text_entry.get().strip()
+        if not time_text or not text:
+            return
+        self.state_data[&quot;reminders&quot;].append({&quot;id&quot;: new_id(), &quot;time&quot;: time_text, &quot;text&quot;: text, &quot;fired_on&quot;: &quot;&quot;})
+        self.refresh_all()
+
+    def check_reminders(self):
+        now = datetime.now().strftime(&quot;%H:%M&quot;)
+        for reminder in self.state_data[&quot;reminders&quot;]:
+            if reminder[&quot;time&quot;] == now and reminder.get(&quot;fired_on&quot;) != today_key():
+                reminder[&quot;fired_on&quot;] = today_key()
+                self.notify(reminder[&quot;text&quot;])
+        self.save_state()
+        self.after(30000, self.check_reminders)
+
+    def add_time_block(self):
+        self.state_data[&quot;planner_blocks&quot;].append({
+            &quot;id&quot;: new_id(),
+            &quot;date&quot;: today_key(),
+            &quot;hour&quot;: int(self.hour_var.get()),
+            &quot;type&quot;: self.selected_block_var.get(),
+        })
+        self.refresh_all()
+
+    def remove_block(self, block):
+        self.state_data[&quot;planner_blocks&quot;] = [item for item in self.state_data[&quot;planner_blocks&quot;] if item[&quot;id&quot;] != block[&quot;id&quot;]]
+        self.refresh_all()
+
+    def add_deadline(self):
+        title = self.deadline_title_entry.get().strip()
+        deadline_date = self.deadline_date_entry.get().strip()
+        if not title:
+            return
+        try:
+            parse_day(deadline_date)
+        except ValueError:
+            messagebox.showwarning(&quot;Deadline&quot;, &quot;Please use YYYY-MM-DD for the date.&quot;)
+            return
+        self.state_data[&quot;deadlines&quot;].append({&quot;id&quot;: new_id(), &quot;title&quot;: title, &quot;date&quot;: deadline_date, &quot;type&quot;: self.deadline_type_var.get()})
+        self.refresh_all()
+
+    def break_task_down(self):
+        task = self.breakdown_entry.get().strip()
+        if not task:
+            return
+        lower = task.lower()
+        if &quot;essay&quot; in lower:
+            steps = [&quot;Open document&quot;, &quot;Create title&quot;, &quot;Research sources&quot;, &quot;Write introduction&quot;, &quot;Write first section&quot;, &quot;Save and choose the next section&quot;]
+        elif &quot;exam&quot; in lower or &quot;test&quot; in lower:
+            steps = [&quot;List topics&quot;, &quot;Mark the hardest topic&quot;, &quot;Review notes for 10 minutes&quot;, &quot;Do three practice questions&quot;, &quot;Write one question for a teacher or friend&quot;]
+        elif &quot;clean&quot; in lower or &quot;room&quot; in lower:
+            steps = [&quot;Choose one small area&quot;, &quot;Set a 10 minute timer&quot;, &quot;Put rubbish in one bag&quot;, &quot;Move dishes or laundry&quot;, &quot;Stop when the timer ends&quot;]
+        else:
+            steps = [f&quot;Name the smallest visible part of &#x27;{task}&#x27;&quot;, &quot;Open the tool or material&quot;, &quot;Set a 10 minute timer&quot;, &quot;Do one tiny chunk&quot;, &quot;Write the next action before stopping&quot;]
+        self.state_data[&quot;last_breakdown&quot;] = steps
+        self.refresh_all()
+
+    def add_steps_to_tasks(self):
+        for step in self.state_data.get(&quot;last_breakdown&quot;, []):
+            self.state_data[&quot;tasks&quot;].append({&quot;id&quot;: new_id(), &quot;title&quot;: step, &quot;priority&quot;: &quot;Important&quot;, &quot;subject&quot;: &quot;Breakdown&quot;, &quot;done&quot;: False, &quot;created&quot;: today_key()})
+        self.add_xp(len(self.state_data.get(&quot;last_breakdown&quot;, [])))
+        self.notify(&quot;Steps added to the to-do list.&quot;)
+        self.refresh_all()
+
+    def suggest_goals(self):
+        if not hasattr(self, &quot;goal_text&quot;):
+            return
+        try:
+            minutes = max(10, min(600, int(self.goal_minutes_entry.get())))
+        except ValueError:
+            minutes = 240
+        minimum = max(10, round(minutes * 0.125 / 5) * 5)
+        target = max(minimum + 10, round(minutes * 0.5 / 5) * 5)
+        text = (
+            f&quot;Minimum Goal: {minimum} min\n&quot;
+            &quot;Open the work and complete one small action.\n\n&quot;
+            f&quot;Target Goal: {target} min\n&quot;
+            &quot;Finish the useful middle version.\n\n&quot;
+            f&quot;Stretch Goal: {minutes} min\n&quot;
+            &quot;Continue only if energy is still available.&quot;
+        )
+        self.goal_text.delete(&quot;1.0&quot;, &quot;end&quot;)
+        self.goal_text.insert(&quot;1.0&quot;, text)
+
+    def send_chat(self):
+        text = self.chat_entry.get().strip()
+        if not text:
+            return
+        self.state_data[&quot;chat&quot;].append({&quot;role&quot;: &quot;you&quot;, &quot;text&quot;: text})
+        self.state_data[&quot;chat&quot;].append({&quot;role&quot;: &quot;coach&quot;, &quot;text&quot;: self.coach_reply(text)})
+        self.refresh_all()
+
+    def render_chat(self):
+        self.chat_text.delete(&quot;1.0&quot;, &quot;end&quot;)
+        for message in self.state_data[&quot;chat&quot;][-14:]:
+            name = &quot;You&quot; if message[&quot;role&quot;] == &quot;you&quot; else &quot;Coach&quot;
+            self.chat_text.insert(&quot;end&quot;, f&quot;{name}: {message[&#x27;text&#x27;]}\n\n&quot;)
+        self.chat_text.configure(state=&quot;disabled&quot;)
+
+    def coach_reply(self, text):
+        lower = text.lower()
+        biggest = self.biggest_distraction()
+        if &quot;weak&quot; in lower or &quot;improve&quot; in lower:
+            weak = f&quot;{biggest[0].lower()} distraction&quot; if biggest else &quot;starting friction&quot;
+            return f&quot;Your current weak point looks like {weak}. Try a 10 minute minimum goal, then stop or continue based on energy.&quot;
+        if &quot;focus&quot; in lower or &quot;adhd&quot; in lower:
+            return &quot;Use Emergency Focus, write only the current task, and begin with a timer that feels almost too easy. 10-15 minutes counts.&quot;
+        if &quot;deadline&quot; in lower or &quot;exam&quot; in lower:
+            next_item = self.next_deadline()
+            if next_item:
+                days = (parse_day(next_item[&quot;date&quot;]) - date.today()).days
+                return f&quot;{next_item[&#x27;title&#x27;]} is {self.days_label(days)}. Put one Study block before the next rest block.&quot;
+            return &quot;Add the deadline first, then split it into review blocks across the calendar.&quot;
+        if &quot;burnout&quot; in lower or &quot;tired&quot; in lower:
+            return &quot;Treat tiredness as information. Pick the Minimum Goal, lower sensory load, and protect one real rest block.&quot;
+        return &quot;Choose one task, make it smaller, set a gentle timer, and record what happened afterwards.&quot;
+
+    def add_distraction(self):
+        try:
+            minutes = int(self.distraction_minutes_entry.get())
+        except ValueError:
+            messagebox.showwarning(&quot;Distraction&quot;, &quot;Please enter minutes as a number.&quot;)
+            return
+        self.state_data[&quot;distractions&quot;].insert(0, {
+            &quot;id&quot;: new_id(),
+            &quot;date&quot;: today_key(),
+            &quot;type&quot;: self.distraction_type_var.get(),
+            &quot;minutes&quot;: minutes,
+            &quot;note&quot;: self.distraction_note_entry.get().strip(),
+        })
+        self.refresh_all()
+
+    def add_routine_item(self, key, entry):
+        title = entry.get().strip()
+        if not title:
+            return
+        self.state_data[&quot;routines&quot;][key].append({&quot;id&quot;: new_id(), &quot;title&quot;: title, &quot;done&quot;: False})
+        self.refresh_all()
+
+    def toggle_routine(self, key, item, var):
+        item[&quot;done&quot;] = bool(var.get())
+        if item[&quot;done&quot;]:
+            self.add_xp(3)
+        self.refresh_all()
+
+    def remove_routine(self, key, item):
+        self.state_data[&quot;routines&quot;][key] = [candidate for candidate in self.state_data[&quot;routines&quot;][key] if candidate[&quot;id&quot;] != item[&quot;id&quot;]]
+        self.refresh_all()
+
+    def save_journal(self):
+        self.state_data[&quot;journal&quot;][today_key()] = {
+            &quot;well&quot;: self.journal_well.get(&quot;1.0&quot;, &quot;end&quot;).strip(),
+            &quot;difficult&quot;: self.journal_difficult.get(&quot;1.0&quot;, &quot;end&quot;).strip(),
+            &quot;tomorrow&quot;: self.journal_tomorrow.get(&quot;1.0&quot;, &quot;end&quot;).strip(),
+        }
+        self.add_xp(6)
+        self.notify(&quot;Reflection saved.&quot;)
+        self.refresh_all()
+
+    def render_weekly_review(self):
+        if not hasattr(self, &quot;weekly_text&quot;):
+            return
+        best = max(self.daily_totals(7), key=lambda item: item[&quot;minutes&quot;])
+        biggest = self.biggest_distraction()
+        total = self.total_minutes_since(7)
+        recommendation = self.weekly_recommendation(total, biggest)
+        lines = [
+            f&quot;Total study time: {total / 60:.1f}h ({total} minutes)&quot;,
+            f&quot;Best focus day: {best[&#x27;date&#x27;]} with {best[&#x27;minutes&#x27;]} minutes&quot; if best[&quot;minutes&quot;] else &quot;Best focus day: not enough data yet&quot;,
+            f&quot;Biggest distraction: {biggest[0]}, {biggest[1]} minutes&quot; if biggest else &quot;Biggest distraction: none recorded&quot;,
+            f&quot;Mood trend: {self.mood_trend()}&quot;,
+            f&quot;Recommended improvement: {recommendation}&quot;,
+        ]
+        self.weekly_text.configure(state=&quot;normal&quot;)
+        self.weekly_text.delete(&quot;1.0&quot;, &quot;end&quot;)
+        self.weekly_text.insert(&quot;1.0&quot;, &quot;\n&quot;.join(lines))
+
+    def save_partner(self):
+        self.state_data[&quot;partner&quot;] = {
+            &quot;name&quot;: self.partner_name_entry.get().strip(),
+            &quot;email&quot;: self.partner_email_entry.get().strip(),
+        }
+        self.notify(&quot;Accountability partner saved.&quot;)
+        self.save_state()
+
+    def copy_weekly_report(self):
+        text = self.report_text()
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self.notify(&quot;Weekly report copied.&quot;)
+
+    def export_pdf_report(self):
+        path = filedialog.asksaveasfilename(
+            title=&quot;Export PDF report&quot;,
+            defaultextension=&quot;.pdf&quot;,
+            filetypes=[(&quot;PDF files&quot;, &quot;*.pdf&quot;)],
+            initialfile=&quot;tijdmanager-progress-report.pdf&quot;,
+        )
+        if not path:
+            return
+        write_simple_pdf(Path(path), self.report_text().splitlines())
+        self.notify(&quot;PDF report exported.&quot;)
+
+    def report_text(self):
+        return (
+            &quot;TIJDMANAGER Progress Report\n\n&quot;
+            f&quot;This week\n{self.weekly_text.get(&#x27;1.0&#x27;, &#x27;end&#x27;).strip() if hasattr(self, &#x27;weekly_text&#x27;) else &#x27;&#x27;}\n\n&quot;
+            f&quot;Completion rate: {self.completion_rate()}%\n&quot;
+            f&quot;Focus score: {self.focus_score()}\n&quot;
+            f&quot;Streak: {self.streak()} days\n&quot;
+        )
+
+    def save_settings(self):
+        for key, var in self.setting_vars.items():
+            self.state_data[&quot;settings&quot;][key] = bool(var.get())
+        self.save_state()
+        self.notify(&quot;Sensory settings saved.&quot;)
+
+    def update_language(self):
+        self.state_data[&quot;settings&quot;][&quot;language&quot;] = self.language_var.get()
+        self.save_state()
+        self.notify(f&quot;Language preference saved: {self.language_var.get()}&quot;)
+
+    def add_xp(self, amount):
+        self.state_data[&quot;xp&quot;] = max(0, int(self.state_data.get(&quot;xp&quot;, 0)) + int(amount))
+
+    def notify(self, text):
+        self.status_var.set(text)
+        if self.state_data[&quot;settings&quot;].get(&quot;sound&quot;):
+            self.bell()
+
+    def daily_totals(self, days):
+        result = []
+        for offset in range(days):
+            key = day_key(-offset)
+            result.append({&quot;date&quot;: key, &quot;minutes&quot;: self.total_minutes_for_date(key)})
+        return result
+
+    def total_minutes_for_date(self, key):
+        return sum(int(item[&quot;minutes&quot;]) for item in self.state_data[&quot;study_logs&quot;] if item[&quot;date&quot;] == key)
+
+    def total_minutes_since(self, days):
+        return sum(item[&quot;minutes&quot;] for item in self.daily_totals(days))
+
+    def completion_rate(self):
+        tasks = self.state_data[&quot;tasks&quot;]
+        if not tasks:
+            return 0
+        return round(sum(1 for item in tasks if item.get(&quot;done&quot;)) / len(tasks) * 100)
+
+    def focus_score(self):
+        study = self.total_minutes_since(7)
+        distractions = sum(int(item[&quot;minutes&quot;]) for item in self.state_data[&quot;distractions&quot;] if parse_day(item[&quot;date&quot;]) &gt;= date.today() - timedelta(days=7))
+        return max(0, min(100, round(study / max(60, study + distractions) * 100)))
+
+    def streak(self):
+        count = 0
+        for offset in range(365):
+            if self.total_minutes_for_date(day_key(-offset)) &gt; 0:
+                count += 1
+            else:
+                break
+        return count
+
+    def biggest_distraction(self):
+        totals = Counter()
+        for item in self.state_data[&quot;distractions&quot;]:
+            totals[item[&quot;type&quot;]] += int(item[&quot;minutes&quot;])
+        return totals.most_common(1)[0] if totals else None
+
+    def next_deadline(self):
+        future = [item for item in self.state_data[&quot;deadlines&quot;] if item[&quot;date&quot;] &gt;= today_key()]
+        return sorted(future, key=lambda item: item[&quot;date&quot;])[0] if future else None
+
+    def target_time_summary(self):
+        study_hours = sorted(item[&quot;hour&quot;] for item in self.state_data[&quot;planner_blocks&quot;] if item[&quot;date&quot;] == today_key() and item[&quot;type&quot;] == &quot;Study&quot;)
+        if not study_hours:
+            return &quot;No study block yet&quot;
+        return f&quot;{study_hours[0]:02}:00-{study_hours[-1] + 1:02}:00&quot;
+
+    def days_label(self, days):
+        if days &lt; 0:
+            return f&quot;{abs(days)} days overdue&quot;
+        if days == 0:
+            return &quot;Today&quot;
+        if days == 1:
+            return &quot;Tomorrow&quot;
+        return f&quot;{days} days remaining&quot;
+
+    def schedule_suggestion(self, days):
+        if days &lt;= 1:
+            return &quot;Do a 15 min triage&quot;
+        if days &lt;= 3:
+            return &quot;Plan 2 short blocks&quot;
+        if days &lt;= 7:
+            return &quot;Review every other day&quot;
+        return &quot;Spread into weekly blocks&quot;
+
+    def insight_text(self):
+        biggest = self.biggest_distraction()
+        urgent_open = sum(1 for task in self.state_data[&quot;tasks&quot;] if task[&quot;priority&quot;] == &quot;Urgent&quot; and not task[&quot;done&quot;])
+        today_minutes = self.total_minutes_for_date(today_key())
+        if biggest and biggest[1] &gt;= 20:
+            return f&quot;Weak point: {biggest[0].lower()} drift.\nNext step: place a Break block before the next Study block, then start Emergency Focus.&quot;
+        if urgent_open &gt;= 2:
+            return &quot;Weak point: urgent task overload.\nNext step: turn the top urgent task into three smaller steps.&quot;
+        if today_minutes == 0:
+            return &quot;Weak point: the first start of the day.\nNext step: use the Minimum Goal: 10-15 minutes only.&quot;
+        return &quot;Weak point: keeping momentum visible.\nNext step: record the next small study block after you finish.&quot;
+
+    def burnout_text(self):
+        last_three = sum(item[&quot;minutes&quot;] for item in self.daily_totals(3))
+        previous_three = sum(self.total_minutes_for_date(day_key(-offset)) for offset in range(3, 6))
+        today = self.today_checkin()
+        skipped = sum(1 for item in self.state_data[&quot;tasks&quot;] if not item.get(&quot;done&quot;))
+        risk = 0
+        if previous_three &gt; 0 and last_three &lt; previous_three * 0.55:
+            risk += 1
+        if today.get(&quot;mood&quot;) == &quot;Difficult&quot; or today.get(&quot;stress&quot;, 0) &gt;= 8:
+            risk += 1
+        if skipped &gt;= 5:
+            risk += 1
+        if risk &gt;= 2:
+            return &quot;Burnout risk: rising.\nLower today&#x27;s target, add rest, and keep only one urgent next action.&quot;
+        if risk == 1:
+            return &quot;Burnout signal: watch gently.\nUse a minimum goal and avoid catching up all at once.&quot;
+        return &quot;Burnout risk: low.\nKeep rest visible in the plan so progress stays sustainable.&quot;
+
+    def mood_trend(self):
+        scores = {&quot;Difficult&quot;: 1, &quot;Okay&quot;: 2, &quot;Good&quot;: 3, &quot;Great&quot;: 4}
+        entries = sorted(self.state_data[&quot;checkins&quot;].items())[-7:]
+        if len(entries) &lt; 2:
+            return &quot;not enough check-ins yet&quot;
+        values = [scores.get(value.get(&quot;mood&quot;), 2) for _, value in entries]
+        if values[-1] &gt; values[0]:
+            return &quot;improving&quot;
+        if values[-1] &lt; values[0]:
+            return &quot;getting heavier&quot;
+        return &quot;steady&quot;
+
+    def weekly_recommendation(self, total, biggest):
+        if total &lt; 120:
+            return &quot;use Minimum Goals for four days before increasing target time.&quot;
+        if biggest and biggest[1] &gt; 30:
+            return f&quot;protect breaks from {biggest[0].lower()} with a clear end point.&quot;
+        if self.completion_rate() &lt; 55:
+            return &quot;split urgent tasks into smaller steps before starting the timer.&quot;
+        return &quot;keep the same rhythm and add one planned rest block.&quot;
+
+    def on_close(self):
+        self.save_state()
+        self.destroy()
+
+
+def escape_pdf_text(text: str) -&gt; str:
+    return text.replace(&quot;\\&quot;, &quot;\\\\&quot;).replace(&quot;(&quot;, &quot;\\(&quot;).replace(&quot;)&quot;, &quot;\\)&quot;)
+
+
+def write_simple_pdf(path: Path, lines: list[str]):
+    wrapped = []
+    for line in lines:
+        if not line:
+            wrapped.append(&quot;&quot;)
+            continue
+        wrapped.extend(textwrap.wrap(line, width=88) or [&quot;&quot;])
+    wrapped = wrapped[:48]
+    content_lines = [&quot;BT&quot;, &quot;/F1 12 Tf&quot;, &quot;14 TL&quot;, &quot;50 792 Td&quot;]
+    for line in wrapped:
+        content_lines.append(f&quot;({escape_pdf_text(line)}) Tj&quot;)
+        content_lines.append(&quot;T*&quot;)
+    content_lines.append(&quot;ET&quot;)
+    stream = &quot;\n&quot;.join(content_lines).encode(&quot;latin-1&quot;, errors=&quot;replace&quot;)
+    objects = [
+        b&quot;&lt;&lt; /Type /Catalog /Pages 2 0 R &gt;&gt;&quot;,
+        b&quot;&lt;&lt; /Type /Pages /Kids [3 0 R] /Count 1 &gt;&gt;&quot;,
+        b&quot;&lt;&lt; /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources &lt;&lt; /Font &lt;&lt; /F1 4 0 R &gt;&gt; &gt;&gt; /Contents 5 0 R &gt;&gt;&quot;,
+        b&quot;&lt;&lt; /Type /Font /Subtype /Type1 /BaseFont /Helvetica &gt;&gt;&quot;,
+        b&quot;&lt;&lt; /Length &quot; + str(len(stream)).encode(&quot;ascii&quot;) + b&quot; &gt;&gt;\nstream\n&quot; + stream + b&quot;\nendstream&quot;,
+    ]
+    pdf = b&quot;%PDF-1.4\n&quot;
+    offsets = []
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf += f&quot;{index} 0 obj\n&quot;.encode(&quot;ascii&quot;) + obj + b&quot;\nendobj\n&quot;
+    xref_at = len(pdf)
+    pdf += f&quot;xref\n0 {len(objects) + 1}\n&quot;.encode(&quot;ascii&quot;)
+    pdf += b&quot;0000000000 65535 f \n&quot;
+    for offset in offsets:
+        pdf += f&quot;{offset:010d} 00000 n \n&quot;.encode(&quot;ascii&quot;)
+    pdf += f&quot;trailer\n&lt;&lt; /Size {len(objects) + 1} /Root 1 0 R &gt;&gt;\nstartxref\n{xref_at}\n%%EOF\n&quot;.encode(&quot;ascii&quot;)
+    path.write_bytes(pdf)
+
+
+if __name__ == &quot;__main__&quot;:
+    app = TijdmanagerApp()
+    app.mainloop()
+</code></pre>
+    </section>
+  </div>
+  <footer class="end wrap">end of file</footer>
+</body>
+</html>

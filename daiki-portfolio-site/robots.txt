@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /art/
+
+Sitemap: https://REPLACE-WITH-YOUR-DOMAIN.pages.dev/sitemap.xml
